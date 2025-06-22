@@ -20,18 +20,34 @@ namespace godot
 
 		void rebuild();
 
-		void set_heightmap_width(const real_t value);
-		void set_heightmap_depth(const real_t value);
-		void set_distance_between_vertices(const real_t value);
+		void set_mesh_width(const real_t value);
+		void set_mesh_depth(const real_t value);
+		void set_mesh_resolution(const real_t value);
 
-		[[nodiscard]] real_t get_heightmap_width() const { return heightmap_width; }
-		[[nodiscard]] real_t get_heightmap_depth() const { return heightmap_depth; }
-		[[nodiscard]] real_t get_distance_between_vertices() const { return distance_between_vertices; }
+		void set_data_resolution(int value);
+
+		[[nodiscard]] real_t get_mesh_width() const { return mesh_width; }
+		[[nodiscard]] real_t get_mesh_depth() const { return mesh_depth; }
+		[[nodiscard]] real_t get_mesh_resolution() const { return mesh_resolution; }
+
+		[[nodiscard]] int get_data_resolution() const { return data_resolution; }
+
+		real_t sample_height(real_t x, real_t y) const;
 	
 	private:
-		real_t heightmap_width = 4.0;
-		real_t heightmap_depth = 4.0;
-		real_t distance_between_vertices = 1.0;
+
+		[[nodiscard]] int get_desired_heightmap_data_size() const { return data_resolution * data_resolution; }
+
+		void generate_default_heightmap_data();
+		void generate_default_splatmap_data();
+
+		real_t mesh_width = 4.0;
+		real_t mesh_depth = 4.0;
+		real_t mesh_resolution = 1.0; // Mesh density
+		
+		int data_resolution = 64; // Size of the heightmap image (e.g., 64x64)
+		PackedRealArray heightmap_data;
+		PackedColorArray splatmap_data;
 
 		RID mesh_id;
 		PackedVector3Array vertex_positions;
