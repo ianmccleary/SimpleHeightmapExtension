@@ -38,6 +38,8 @@ namespace godot
 
 		[[nodiscard]] int get_desired_heightmap_data_size() const { return data_resolution * data_resolution; }
 
+		real_t get_height_at(int x, int y) const;
+
 		void generate_default_heightmap_data();
 		void generate_default_splatmap_data();
 

@@ -148,7 +148,20 @@ real_t SimpleHeightmap::sample_height(real_t x, real_t y) const
 	y = Math::clamp(y, static_cast<real_t>(0.0), mesh_depth);
 	const auto px = static_cast<int>(Math::round((x / mesh_width) * data_resolution));
 	const auto py = static_cast<int>(Math::round((y / mesh_depth) * data_resolution));
-	const auto i = Math::clamp(px + py * data_resolution, 0, get_desired_heightmap_data_size() - 1);
+	return (
+		get_height_at(px, py) + 
+		get_height_at(px - 1, py) + 
+		get_height_at(px + 1, py) +
+		get_height_at(px, py - 1) +
+		get_height_at(px, py + 1)
+	) / static_cast<real_t>(5.0);
+}
+
+real_t SimpleHeightmap::get_height_at(int x, int y) const
+{
+	const auto px = Math::clamp(x, 0, data_resolution - 1);
+	const auto py = Math::clamp(y, 0, data_resolution - 1);
+	const auto i = px + py * data_resolution;
 	return heightmap_data[i];
 }
 
@@ -183,10 +196,17 @@ void SimpleHeightmap::set_data_resolution(int value)
 
 void SimpleHeightmap::generate_default_heightmap_data()
 {
-	auto rng = memnew(RandomNumberGenerator()); // Ref counted, will be cleaned up
 	heightmap_data.resize(get_desired_heightmap_data_size());
-	for (int i = 0; i < heightmap_data.size(); ++i)
-		heightmap_data[i] = rng->randf_range(0.0, 1.0);
+	for (int x = 0; x < data_resolution; ++x)
+	{
+		for (int z = 0; z < data_resolution; ++z)
+		{
+			int i = x + z * data_resolution;
+			heightmap_data[i] = 
+				Math::sin(static_cast<real_t>(x) / static_cast<real_t>(data_resolution) * Math_TAU) *
+				Math::cos(static_cast<real_t>(z) / static_cast<real_t>(data_resolution) * Math_TAU);
+		}
+	}
 }
 
 void SimpleHeightmap::generate_default_splatmap_data()
