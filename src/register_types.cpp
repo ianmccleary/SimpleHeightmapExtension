@@ -2,6 +2,10 @@
 
 #include "simple_heightmap.h"
 
+#ifdef TOOLS_ENABLED
+#include "simple_heightmap_editor_plugin.h"
+#endif // TOOLS_ENABLED
+
 #include <gdextension_interface.h>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
@@ -10,12 +14,18 @@ using namespace godot;
 
 void initialize_simple_heightmap_module(ModuleInitializationLevel p_level)
 {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE)
+	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE)
 	{
-		return;
+		GDREGISTER_CLASS(SimpleHeightmap);
 	}
 
-	GDREGISTER_CLASS(SimpleHeightmap);
+#ifdef TOOLS_ENABLED
+	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR)
+	{
+		GDREGISTER_INTERNAL_CLASS(SimpleHeightmapEditorPlugin);
+		EditorPlugins::add_by_type<SimpleHeightmapEditorPlugin>();
+	}
+#endif // TOOLS_ENABLED
 }
 
 void uninitialize_simple_heightmap_module(ModuleInitializationLevel p_level)
