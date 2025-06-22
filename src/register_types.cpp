@@ -15,7 +15,7 @@ void initialize_simple_heightmap_module(ModuleInitializationLevel p_level)
 		return;
 	}
 
-	GDREGISTER_RUNTIME_CLASS(SimpleHeightmap);
+	GDREGISTER_CLASS(SimpleHeightmap);
 }
 
 void uninitialize_simple_heightmap_module(ModuleInitializationLevel p_level)
