@@ -32,13 +32,13 @@ namespace godot
 
 		[[nodiscard]] int get_data_resolution() const { return data_resolution; }
 
-		real_t sample_height(real_t x, real_t y) const;
+		real_t sample_height(const real_t x, const real_t y) const;
 	
 	private:
 
 		[[nodiscard]] int get_desired_heightmap_data_size() const { return data_resolution * data_resolution; }
 
-		real_t get_height_at(int x, int y) const;
+		real_t get_height_at(const int x, const int y) const;
 
 		void generate_default_heightmap_data();
 		void generate_default_splatmap_data();

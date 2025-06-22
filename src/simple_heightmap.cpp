@@ -142,22 +142,32 @@ void SimpleHeightmap::rebuild()
 	}
 }
 
-real_t SimpleHeightmap::sample_height(real_t x, real_t y) const
+real_t SimpleHeightmap::sample_height(const real_t x, const real_t y) const
 {
-	x = Math::clamp(x, static_cast<real_t>(0.0), mesh_width);
-	y = Math::clamp(y, static_cast<real_t>(0.0), mesh_depth);
-	const auto px = static_cast<int>(Math::round((x / mesh_width) * data_resolution));
-	const auto py = static_cast<int>(Math::round((y / mesh_depth) * data_resolution));
-	return (
-		get_height_at(px, py) + 
-		get_height_at(px - 1, py) + 
-		get_height_at(px + 1, py) +
-		get_height_at(px, py - 1) +
-		get_height_at(px, py + 1)
-	) / static_cast<real_t>(5.0);
+	const auto p = Vector2(
+		(x / mesh_width) * data_resolution,
+		(y / mesh_depth) * data_resolution
+	);
+	
+	const auto pi = Vector2(
+		Math::floor(p.x),
+		Math::floor(p.y)
+	);
+
+	const auto h1 = get_height_at(pi.x + 0, pi.y + 0);
+	const auto h2 = get_height_at(pi.x + 1, pi.y + 0);
+	const auto h3 = get_height_at(pi.x + 0, pi.y + 1);
+	const auto h4 = get_height_at(pi.x + 1, pi.y + 1);
+
+	const auto tx = (p.x - pi.x);
+	const auto ty = (p.y - pi.y);
+
+	const auto a = Math::lerp(h1, h2, tx);
+	const auto b = Math::lerp(h3, h4, tx);
+	return Math::lerp(a, b, ty);
 }
 
-real_t SimpleHeightmap::get_height_at(int x, int y) const
+real_t SimpleHeightmap::get_height_at(const int x, const int y) const
 {
 	const auto px = Math::clamp(x, 0, data_resolution - 1);
 	const auto py = Math::clamp(y, 0, data_resolution - 1);
