@@ -65,25 +65,26 @@ void SimpleHeightmap::rebuild()
 		rserver->mesh_clear(mesh_id);
 
 		// The expected number of vertices on a given side
-		const auto vertices_per_side = static_cast<int>(Math::round(data_resolution * mesh_resolution));
+		const auto quads_per_side = static_cast<int>(Math::round(data_resolution * mesh_resolution));
+		const auto vertices_per_side = quads_per_side + 1;
 
-		const auto dx = (mesh_width / static_cast<real_t>(vertices_per_side));
-		const auto dz = (mesh_depth / static_cast<real_t>(vertices_per_side));
+		const auto dx = (mesh_width / static_cast<real_t>(quads_per_side));
+		const auto dz = (mesh_depth / static_cast<real_t>(quads_per_side));
 
 		auto collision_data = PackedFloat32Array();
 
 		// Calculate Position, UV and Collision Height
 		// Reset Normal
-		const auto vertex_count = (vertices_per_side + 1) * (vertices_per_side + 1);
+		const auto vertex_count = vertices_per_side * vertices_per_side;
 		vertex_positions.resize(vertex_count);
 		vertex_uvs.resize(vertex_count);
 		vertex_normals.resize(vertex_count);
 		collision_data.resize(vertex_count);
-		for (int64_t z = 0; z < vertices_per_side + 1; ++z)
+		for (int64_t z = 0; z < vertices_per_side; ++z)
 		{
-			for (int64_t x = 0; x < vertices_per_side + 1; ++x)
+			for (int64_t x = 0; x < vertices_per_side; ++x)
 			{
-				const auto i = (x % (vertices_per_side + 1)) + (z * (vertices_per_side + 1));
+				const auto i = (x % vertices_per_side) + (z * vertices_per_side);
 				const auto px = x * dx;
 				const auto pz = z * dz;
 				const auto ph = sample_height(px, pz);
@@ -95,20 +96,20 @@ void SimpleHeightmap::rebuild()
 		}
 
 		// Calculate Triangles
-		const auto index_count = (vertices_per_side * vertices_per_side * 6);
+		const auto index_count = (quads_per_side * quads_per_side * 6);
 		indices.resize(index_count);
 		int64_t ti = 0;
 		int64_t vi = 0;
-		for (int64_t z = 0; z < vertices_per_side; ++z)
+		for (int64_t z = 0; z < quads_per_side; ++z)
 		{
-			for (int64_t x = 0; x < vertices_per_side; ++x)
+			for (int64_t x = 0; x < quads_per_side; ++x)
 			{
 				indices[ti + 0] = vi + 1;
-				indices[ti + 1] = vi + vertices_per_side + 1;
+				indices[ti + 1] = vi + quads_per_side + 1;
 				indices[ti + 2] = vi;
 
-				indices[ti + 3] = vi + vertices_per_side + 2;
-				indices[ti + 4] = vi + vertices_per_side + 1;
+				indices[ti + 3] = vi + quads_per_side + 2;
+				indices[ti + 4] = vi + quads_per_side + 1;
 				indices[ti + 5] = vi + 1;
 
 				ti += 6;
@@ -163,12 +164,20 @@ void SimpleHeightmap::rebuild()
 			collision_shape = Ref<HeightMapShape3D>(memnew(HeightMapShape3D));
 			collision_shape_node->set_shape(collision_shape);
 		}
-		collision_shape->set_map_width(vertices_per_side + 1);
-		collision_shape->set_map_depth(vertices_per_side + 1);
+
+		// Assign data to collision shape
+		collision_shape->set_map_width(vertices_per_side);
+		collision_shape->set_map_depth(vertices_per_side);
 		collision_shape->set_map_data(collision_data);
+
+		// The heightmap collision shape is always centered and its quads are always a specific size
+		// Move it to the center to align with this heightmap mesh
 		collision_shape_node->set_position(Vector3(mesh_width * 0.5, 0.0, mesh_depth * 0.5));
-		const real_t actual_heightmap_collision_width = 1.0 * vertices_per_side;
-		const real_t actual_heightmap_collision_depth = 1.0 * vertices_per_side;
+
+		// Rescale it so it matches the size of the heightmap mesh
+		constexpr real_t COLLISION_QUAD_SIZE = 1.0;
+		const real_t actual_heightmap_collision_width = COLLISION_QUAD_SIZE * quads_per_side;
+		const real_t actual_heightmap_collision_depth = COLLISION_QUAD_SIZE* quads_per_side;
 		collision_shape_node->set_scale(
 			Vector3(mesh_width / actual_heightmap_collision_width, 1.0, mesh_depth / actual_heightmap_collision_depth));
 	}
