@@ -1,6 +1,9 @@
 #pragma once
 
+#include <godot_cpp/classes/collision_shape3d.hpp>
+#include <godot_cpp/classes/height_map_shape3d.hpp>
 #include <godot_cpp/classes/geometry_instance3d.hpp>
+#include <godot_cpp/classes/static_body3d.hpp>
 
 namespace godot
 {
@@ -56,5 +59,9 @@ namespace godot
 		PackedVector2Array vertex_uvs;
 		PackedVector3Array vertex_normals;
 		PackedInt32Array indices;
+
+		StaticBody3D* collision_body = nullptr;
+		CollisionShape3D* collision_shape_node = nullptr;
+		Ref<HeightMapShape3D> collision_shape = nullptr;
 	};
 }

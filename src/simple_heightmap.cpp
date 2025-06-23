@@ -70,12 +70,15 @@ void SimpleHeightmap::rebuild()
 		const auto dx = (mesh_width / static_cast<real_t>(vertices_per_side));
 		const auto dz = (mesh_depth / static_cast<real_t>(vertices_per_side));
 
-		// Calculate Position and UV
+		auto collision_data = PackedFloat32Array();
+
+		// Calculate Position, UV and Collision Height
 		// Reset Normal
 		const auto vertex_count = (vertices_per_side + 1) * (vertices_per_side + 1);
 		vertex_positions.resize(vertex_count);
 		vertex_uvs.resize(vertex_count);
 		vertex_normals.resize(vertex_count);
+		collision_data.resize(vertex_count);
 		for (int64_t z = 0; z < vertices_per_side + 1; ++z)
 		{
 			for (int64_t x = 0; x < vertices_per_side + 1; ++x)
@@ -83,9 +86,11 @@ void SimpleHeightmap::rebuild()
 				const auto i = (x % (vertices_per_side + 1)) + (z * (vertices_per_side + 1));
 				const auto px = x * dx;
 				const auto pz = z * dz;
-				vertex_positions[i] = Vector3(px, sample_height(px, pz), pz);
+				const auto ph = sample_height(px, pz);
+				vertex_positions[i] = Vector3(px, ph, pz);
 				vertex_uvs[i] = Vector2(px, pz);
 				vertex_normals[i] = Vector3();
+				collision_data[i] = ph;
 			}
 		}
 
@@ -139,6 +144,33 @@ void SimpleHeightmap::rebuild()
 		arrays[Mesh::ARRAY_NORMAL] = vertex_normals;
 		arrays[Mesh::ARRAY_INDEX] = indices;
 		rserver->mesh_add_surface_from_arrays(mesh_id, RenderingServer::PrimitiveType::PRIMITIVE_TRIANGLES, arrays);
+
+		// Rebuild collision
+		if (collision_body == nullptr)
+		{
+			collision_body = memnew(StaticBody3D);
+			add_child(collision_body);
+			collision_body->set_owner(this);
+		}
+		if (collision_shape_node == nullptr)
+		{
+			collision_shape_node = memnew(CollisionShape3D);
+			collision_body->add_child(collision_shape_node);
+			collision_shape_node->set_owner(this);
+		}
+		if (collision_shape.is_null())
+		{
+			collision_shape = Ref<HeightMapShape3D>(memnew(HeightMapShape3D));
+			collision_shape_node->set_shape(collision_shape);
+		}
+		collision_shape->set_map_width(vertices_per_side + 1);
+		collision_shape->set_map_depth(vertices_per_side + 1);
+		collision_shape->set_map_data(collision_data);
+		collision_shape_node->set_position(Vector3(mesh_width * 0.5, 0.0, mesh_depth * 0.5));
+		const real_t actual_heightmap_collision_width = 1.0 * vertices_per_side;
+		const real_t actual_heightmap_collision_depth = 1.0 * vertices_per_side;
+		collision_shape_node->set_scale(
+			Vector3(mesh_width / actual_heightmap_collision_width, 1.0, mesh_depth / actual_heightmap_collision_depth));
 	}
 }
 
