@@ -8,6 +8,9 @@
 #include <godot_cpp/classes/physics_direct_space_state3d.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
 #include <godot_cpp/classes/window.hpp>
+#include <godot_cpp/classes/h_box_container.hpp>
+#include <godot_cpp/classes/editor_property.hpp>
+#include <godot_cpp/classes/button.hpp>
 
 #include "simple_heightmap.h"
 
@@ -26,10 +29,17 @@ void SimpleHeightmapEditorPlugin::_enter_tree()
 	gizmo->set_mesh(box_mesh);
 	gizmo->set_visible(false);
 	add_child(gizmo);
+
+	heightmap_panel = memnew(SimpleHeightmapPanel);
+	add_control_to_container(CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT, heightmap_panel);
 }
 
 void SimpleHeightmapEditorPlugin::_exit_tree()
 {
+	remove_control_from_container(CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT, heightmap_panel);
+	heightmap_panel->queue_free();
+	heightmap_panel = nullptr;
+
 	gizmo->queue_free();
 	gizmo = nullptr;
 

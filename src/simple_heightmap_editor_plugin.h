@@ -10,6 +10,7 @@
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/ref.hpp>
 #include "simple_heightmap.h"
+#include "simple_heightmap_panel.h"
 
 namespace godot
 {	
@@ -32,7 +33,9 @@ namespace godot
 		int32_t _forward_3d_gui_input(Camera3D *p_viewport_camera, const Ref<InputEvent> &p_event) override;
 
 	private:
-		Control* heightmap_editor_buttons = nullptr;
+
+		SimpleHeightmapPanel* heightmap_panel = nullptr;
+
 		SimpleHeightmap* selected_heightmap = nullptr;
 
 		Ref<BoxMesh> box_mesh = nullptr;
