@@ -228,18 +228,18 @@ Vector<Vector2i> SimpleHeightmap::get_pixel_coordinates_in_range(const Vector3& 
 
 	// Calculate the min and max bounds
 	const auto min = Vector2i(
-		Math::floor(pixel_position.x - pixel_range.x),
-		Math::floor(pixel_position.y - pixel_range.y)
+		Math::clamp(static_cast<int>(Math::round(pixel_position.x - pixel_range.x)), 0, data_resolution),
+		Math::clamp(static_cast<int>(Math::round(pixel_position.y - pixel_range.y)), 0, data_resolution)
 	);
 	const auto max = Vector2i(
-		Math::floor(pixel_position.x + pixel_range.x),
-		Math::floor(pixel_position.y + pixel_range.y)
+		Math::clamp(static_cast<int>(Math::round(pixel_position.x + pixel_range.x)), 0, data_resolution),
+		Math::clamp(static_cast<int>(Math::round(pixel_position.y + pixel_range.y)), 0, data_resolution)
 	);
 
 	Vector<Vector2i> pixels;
-	for (auto x = min.x; x < max.x; ++x)
+	for (auto x = min.x; x <= max.x; ++x)
 	{
-		for (auto y = min.y; y < max.y; ++y)
+		for (auto y = min.y; y <= max.y; ++y)
 		{
 			pixels.push_back(Vector2i(x, y));
 		}
