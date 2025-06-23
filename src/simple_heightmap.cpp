@@ -190,28 +190,56 @@ real_t SimpleHeightmap::sample_height(const real_t x, const real_t y) const
 		(y / mesh_depth) * data_resolution
 	);
 	
-	const auto pi = Vector2(
-		Math::floor(p.x),
-		Math::floor(p.y)
+	const auto pi = Vector2i(
+		static_cast<int>(p.x),
+		static_cast<int>(p.y)
 	);
 
-	const auto h1 = get_height_at(pi.x + 0, pi.y + 0);
-	const auto h2 = get_height_at(pi.x + 1, pi.y + 0);
-	const auto h3 = get_height_at(pi.x + 0, pi.y + 1);
-	const auto h4 = get_height_at(pi.x + 1, pi.y + 1);
+	const auto h1 = get_height_at(Vector2i(pi.x, pi.y));
+	const auto h2 = get_height_at(Vector2i(pi.x + 1, pi.y));
+	const auto h3 = get_height_at(Vector2i(pi.x, pi.y + 1));
+	const auto h4 = get_height_at(Vector2i(pi.x + 1, pi.y + 1));
 
-	const auto tx = (p.x - pi.x);
-	const auto ty = (p.y - pi.y);
+	const auto tx = (p.x - Math::floor(p.x));
+	const auto ty = (p.y - Math::floor(p.y));
 
 	const auto a = Math::lerp(h1, h2, tx);
 	const auto b = Math::lerp(h3, h4, tx);
 	return Math::lerp(a, b, ty);
 }
 
-real_t SimpleHeightmap::get_height_at(const int x, const int y) const
+Vector3 SimpleHeightmap::snap_world_position_to_pixel(const Vector3& world_position) const
 {
-	const auto px = Math::clamp(x, 0, data_resolution - 1);
-	const auto py = Math::clamp(y, 0, data_resolution - 1);
+	const auto p = local_position_to_pixel_coordinates(to_local(world_position));
+	const auto h = get_height_at(p);
+	return to_global(pixel_coordinates_to_local_position(p, h));
+}
+
+Vector2i SimpleHeightmap::local_position_to_pixel_coordinates(const Vector3& local_position) const
+{
+	const auto px = static_cast<int>(Math::round((local_position.x / mesh_width) * data_resolution));
+	const auto py = static_cast<int>(Math::round((local_position.z / mesh_depth) * data_resolution));
+	return Vector2i(
+		Math::clamp(px, 0, data_resolution - 1),
+		Math::clamp(py, 0, data_resolution - 1)
+	);
+}
+
+Vector3 SimpleHeightmap::pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates, const real_t height) const
+{
+	const auto px = (static_cast<real_t>(pixel_coordinates.x) / static_cast<real_t>(data_resolution)) * mesh_width;
+	const auto pz = (static_cast<real_t>(pixel_coordinates.y) / static_cast<real_t>(data_resolution)) * mesh_depth;
+	return Vector3(
+		px,
+		height,
+		pz
+	);
+}
+
+real_t SimpleHeightmap::get_height_at(const Vector2i& p) const
+{
+	const auto px = Math::clamp(p.x, 0, data_resolution - 1);
+	const auto py = Math::clamp(p.y, 0, data_resolution - 1);
 	const auto i = px + py * data_resolution;
 	return heightmap_data[i];
 }

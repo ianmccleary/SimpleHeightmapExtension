@@ -36,12 +36,16 @@ namespace godot
 		[[nodiscard]] int get_data_resolution() const { return data_resolution; }
 
 		real_t sample_height(const real_t x, const real_t y) const;
+		
+		Vector3 snap_world_position_to_pixel(const Vector3& world_position) const;
 	
 	private:
 
 		[[nodiscard]] int get_desired_heightmap_data_size() const { return data_resolution * data_resolution; }
 
-		real_t get_height_at(const int x, const int y) const;
+		Vector2i local_position_to_pixel_coordinates(const Vector3& local_position) const;
+		Vector3 pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates, const real_t height = 0.0) const;
+		real_t get_height_at(const Vector2i& p) const;
 
 		void generate_default_heightmap_data();
 		void generate_default_splatmap_data();

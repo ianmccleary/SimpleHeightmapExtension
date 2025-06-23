@@ -2,10 +2,12 @@
 
 #ifdef TOOLS_ENABLED
 
+#include <godot_cpp/classes/box_mesh.hpp>
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/control.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
 #include <godot_cpp/classes/input_event.hpp>
+#include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/ref.hpp>
 #include "simple_heightmap.h"
 
@@ -27,12 +29,14 @@ namespace godot
 		void _make_visible(bool p_visible) override;
 		void _edit(Object *p_object) override;
 
-		void _forward_3d_draw_over_viewport(Control* p_viewport_control) override;
 		int32_t _forward_3d_gui_input(Camera3D *p_viewport_camera, const Ref<InputEvent> &p_event) override;
 
 	private:
 		Control* heightmap_editor_buttons = nullptr;
-		SimpleHeightmap* simple_heightmap = nullptr;
+		SimpleHeightmap* selected_heightmap = nullptr;
+
+		Ref<BoxMesh> box_mesh = nullptr;
+		MeshInstance3D* gizmo = nullptr;
 	};
 }
 
