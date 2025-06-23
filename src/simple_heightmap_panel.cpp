@@ -16,6 +16,8 @@ void SimpleHeightmapPanel::_bind_methods()
 
 SimpleHeightmapPanel::SimpleHeightmapPanel()
 {
+	brush_size = 5.0;
+
 	auto tools_hbox_top = memnew(HBoxContainer);
 	add_child(tools_hbox_top);
 	create_tool_button(tools_hbox_top, TOOL_RAISE, "Raise");
@@ -37,7 +39,7 @@ SimpleHeightmapPanel::SimpleHeightmapPanel()
 	brush_size_slider->set_min(0.0);
 	brush_size_slider->set_step(0.1);
 	brush_size_slider->set_allow_greater(true);
-	brush_size_slider->set_value(5.0);
+	brush_size_slider->set_value(brush_size);
 	brush_size_slider->connect("value_changed", callable_mp(this, &SimpleHeightmapPanel::brush_size_changed).unbind(1));
 	add_child(brush_size_slider);
 }
@@ -63,7 +65,10 @@ void SimpleHeightmapPanel::tool_button_pressed(int tool)
 }
 
 void SimpleHeightmapPanel::brush_size_changed()
-{ }
+{
+	if (brush_size_slider != nullptr)
+		brush_size = brush_size_slider->get_value();
+}
 
 SimpleHeightmapPanel::~SimpleHeightmapPanel()
 { }

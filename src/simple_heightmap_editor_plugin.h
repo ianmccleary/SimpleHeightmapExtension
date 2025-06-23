@@ -2,12 +2,12 @@
 
 #ifdef TOOLS_ENABLED
 
-#include <godot_cpp/classes/box_mesh.hpp>
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/control.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
 #include <godot_cpp/classes/input_event.hpp>
-#include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/multi_mesh.hpp>
+#include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 #include <godot_cpp/classes/ref.hpp>
 #include "simple_heightmap.h"
 #include "simple_heightmap_panel.h"
@@ -38,8 +38,8 @@ namespace godot
 
 		SimpleHeightmap* selected_heightmap = nullptr;
 
-		Ref<BoxMesh> box_mesh = nullptr;
-		MeshInstance3D* gizmo = nullptr;
+		MultiMeshInstance3D* gizmo = nullptr;
+		Ref<MultiMesh> gizmo_multimesh = nullptr;
 	};
 }
 

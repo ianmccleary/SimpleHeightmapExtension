@@ -87,7 +87,7 @@ void SimpleHeightmap::rebuild()
 				const auto i = (x % vertices_per_side) + (z * vertices_per_side);
 				const auto px = x * dx;
 				const auto pz = z * dz;
-				const auto ph = sample_height(px, pz);
+				const auto ph = sample_height(Vector3(px, 0.0, pz));
 				vertex_positions[i] = Vector3(px, ph, pz);
 				vertex_uvs[i] = Vector2(px, pz);
 				vertex_normals[i] = Vector3();
@@ -183,11 +183,11 @@ void SimpleHeightmap::rebuild()
 	}
 }
 
-real_t SimpleHeightmap::sample_height(const real_t x, const real_t y) const
+real_t SimpleHeightmap::sample_height(const Vector3& local_position) const
 {
 	const auto p = Vector2(
-		(x / mesh_width) * data_resolution,
-		(y / mesh_depth) * data_resolution
+		(local_position.x / mesh_width) * data_resolution,
+		(local_position.z / mesh_depth) * data_resolution
 	);
 	
 	const auto pi = Vector2i(
@@ -208,11 +208,43 @@ real_t SimpleHeightmap::sample_height(const real_t x, const real_t y) const
 	return Math::lerp(a, b, ty);
 }
 
-Vector3 SimpleHeightmap::snap_world_position_to_pixel(const Vector3& world_position) const
+// Vector3 SimpleHeightmap::snap_world_position_to_pixel(const Vector3& world_position) const
+// {
+// 	const auto p = local_position_to_pixel_coordinates(to_local(world_position));
+// 	const auto h = get_height_at(p);
+// 	return to_global(pixel_coordinates_to_local_position(p, h));
+// }
+Vector<Vector2i> SimpleHeightmap::get_pixel_coordinates_in_range(const Vector3& local_position, const real_t range_radius) const
 {
-	const auto p = local_position_to_pixel_coordinates(to_local(world_position));
-	const auto h = get_height_at(p);
-	return to_global(pixel_coordinates_to_local_position(p, h));
+	// Convert the position and range to pixel space
+	const auto pixel_position = Vector2(
+		(local_position.x / mesh_width) * data_resolution,
+		(local_position.z / mesh_depth) * data_resolution
+	);
+	const auto pixel_range = Vector2(
+		(range_radius / mesh_width) * data_resolution,
+		(range_radius / mesh_depth) * data_resolution
+	);
+
+	// Calculate the min and max bounds
+	const auto min = Vector2i(
+		Math::floor(pixel_position.x - pixel_range.x),
+		Math::floor(pixel_position.y - pixel_range.y)
+	);
+	const auto max = Vector2i(
+		Math::floor(pixel_position.x + pixel_range.x),
+		Math::floor(pixel_position.y + pixel_range.y)
+	);
+
+	Vector<Vector2i> pixels;
+	for (auto x = min.x; x < max.x; ++x)
+	{
+		for (auto y = min.y; y < max.y; ++y)
+		{
+			pixels.push_back(Vector2i(x, y));
+		}
+	}
+	return pixels;
 }
 
 Vector2i SimpleHeightmap::local_position_to_pixel_coordinates(const Vector3& local_position) const
@@ -225,13 +257,13 @@ Vector2i SimpleHeightmap::local_position_to_pixel_coordinates(const Vector3& loc
 	);
 }
 
-Vector3 SimpleHeightmap::pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates, const real_t height) const
+Vector3 SimpleHeightmap::pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates) const
 {
 	const auto px = (static_cast<real_t>(pixel_coordinates.x) / static_cast<real_t>(data_resolution)) * mesh_width;
 	const auto pz = (static_cast<real_t>(pixel_coordinates.y) / static_cast<real_t>(data_resolution)) * mesh_depth;
 	return Vector3(
 		px,
-		height,
+		get_height_at(pixel_coordinates),
 		pz
 	);
 }

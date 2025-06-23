@@ -11,6 +11,7 @@
 #include <godot_cpp/classes/h_box_container.hpp>
 #include <godot_cpp/classes/editor_property.hpp>
 #include <godot_cpp/classes/button.hpp>
+#include <godot_cpp/classes/box_mesh.hpp>
 
 #include "simple_heightmap.h"
 
@@ -22,12 +23,17 @@ void SimpleHeightmapEditorPlugin::_bind_methods()
 
 void SimpleHeightmapEditorPlugin::_enter_tree()
 {
-	box_mesh = Ref<BoxMesh>(memnew(BoxMesh));
+	auto box_mesh = Ref<BoxMesh>(memnew(BoxMesh));
 	box_mesh->set_size(Vector3(1.0, 1.0, 1.0));
 
-	gizmo = memnew(MeshInstance3D);
-	gizmo->set_mesh(box_mesh);
-	gizmo->set_visible(false);
+	gizmo_multimesh = Ref<MultiMesh>(memnew(MultiMesh));
+	gizmo_multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
+	gizmo_multimesh->set_instance_count(64);
+	gizmo_multimesh->set_visible_instance_count(0);
+	gizmo_multimesh->set_mesh(box_mesh);
+
+	gizmo = memnew(MultiMeshInstance3D);
+	gizmo->set_multimesh(gizmo_multimesh);
 	add_child(gizmo);
 
 	heightmap_panel = memnew(SimpleHeightmapPanel);
@@ -43,7 +49,7 @@ void SimpleHeightmapEditorPlugin::_exit_tree()
 	gizmo->queue_free();
 	gizmo = nullptr;
 
-	box_mesh = Ref<BoxMesh>();
+	gizmo_multimesh = Ref<BoxMesh>();
 }
 
 bool SimpleHeightmapEditorPlugin::_handles(Object *p_object) const
@@ -54,7 +60,6 @@ bool SimpleHeightmapEditorPlugin::_handles(Object *p_object) const
 void SimpleHeightmapEditorPlugin::_make_visible(bool p_visible)
 {
 	// TODO
-	printf("make_visible");
 }
 
 void SimpleHeightmapEditorPlugin::_edit(Object *p_object)
@@ -110,9 +115,36 @@ int32_t SimpleHeightmapEditorPlugin::_forward_3d_gui_input(Camera3D* p_viewport_
 		if (hit_heightmap == selected_heightmap)
 		{
 			// Show gizmos
-			auto collision_point = static_cast<Vector3>(result["position"]);
-			gizmo->set_global_position(hit_heightmap->snap_world_position_to_pixel(collision_point));
+			const auto brush_size_radius = heightmap_panel->get_brush_size();
+
+			// determine min and max (e.g., bounding box) in pixel coordinates
+			// const auto brush_width_in_pixels = (brush_size_radius / hit_heightmap->get_mesh_width()) * static_cast<real_t>(hit_heightmap->get_data_resolution());
+			// const auto brush_depth_in_pixels = (brush_size_radius / hit_heightmap->get_mesh_depth()) * static_cast<real_t>(hit_heightmap->get_data_resolution());
+
+			// for (auto x = static_cast<real_t>(0.0); x < brush_width_in_pixels; ++x)
+			// {
+			// 	for (auto z = static_cast<real_t>(0.0); z < brush_depth_in_pixels; ++z)
+			// 	{
+			// 	}
+			// }
+			const auto collision_point = static_cast<Vector3>(result["position"]);
+			const auto pixels = hit_heightmap->get_pixel_coordinates_in_range(collision_point, brush_size_radius);
+
+			printf("Pixels Returned: %d\n", pixels.size());			
+			
+			const auto count = Math::min(gizmo_multimesh->get_instance_count(), (int32_t)pixels.size());
+			gizmo_multimesh->set_visible_instance_count(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				Transform3D t;
+				t.set_basis(Basis()); // TODO: Scale based on distance to collision point
+				t.set_origin(hit_heightmap->to_global(hit_heightmap->pixel_coordinates_to_local_position(pixels[i])));
+				gizmo_multimesh->set_instance_transform(i, t);
+			}
 			gizmo->set_visible(true);
+			// 
+			// gizmo->set_global_position(hit_heightmap->snap_world_position_to_pixel(collision_point));
+			// gizmo->set_visible(true);
 		}
 		else
 		{

@@ -19,6 +19,8 @@ namespace godot
 		SimpleHeightmapPanel();
 		~SimpleHeightmapPanel();
 
+		[[nodiscard]] real_t get_brush_size() const { return brush_size; }
+
 	private:
 		enum Tools
 		{
@@ -37,6 +39,8 @@ namespace godot
 		Button* tool_button[TOOL_MAX];
 
 		EditorSpinSlider* brush_size_slider = nullptr;
+
+		real_t brush_size;
 	};
 }
 
