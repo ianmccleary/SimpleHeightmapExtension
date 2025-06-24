@@ -10,13 +10,10 @@ template<typename T>
 class SquareImage
 {
 public:
-	SquareImage(int32_t new_size)
-		: data(), buffer(), size(new_size)
-	{
-		resize(new_size);
-	}
+	SquareImage() = default;
+	~SquareImage() = default;
 
-	[[nodiscard]] const Vector<T>& get_data() const { return data; }
+	[[nodiscard]] const godot::Vector<T>& get_data() const { return data; }
 	[[nodiscard]] int32_t get_size() const { return size; }
 
 	void resize(size_t new_size)
@@ -26,11 +23,68 @@ public:
 		buffer.resize_zeroed(new_size);
 	}
 
+	template<typename F>
+	void for_each_pixel(const godot::Vector2& center, const real_t radius, F functor) const
+	{
+		const auto min = godot::Vector2i(
+			Math::clamp(static_cast<int32_t>(Math::round(center.x - radius)), 0, size),
+			Math::clamp(static_cast<int32_t>(Math::round(center.y - radius)), 0, size)
+		);
+		const auto max = godot::Vector2i(
+			Math::clamp(static_cast<int32_t>(Math::round(center.x + radius)), 0, size),
+			Math::clamp(static_cast<int32_t>(Math::round(center.y + radius)), 0, size)
+		);
+		for (auto x = min.x; x <= max.x; ++x)
+		{
+			for (auto y = min.y; y <= min.y; ++y)
+			{
+				const auto d = center.distance_to(godot::Vector2(x, y));
+				const auto t = Math::max((real_t)1.0 - (d / radius), (real_t)0.0);
+				functor(get_index(x, y), x, y, t);
+			}
+		}
+	}
+
+	template<typename F>
+	void for_each_pixel(const godot::Vector2& center, const real_t radius, F functor)
+	{
+		const auto min = godot::Vector2i(
+			Math::clamp(static_cast<int32_t>(Math::round(center.x - radius)), 0, size),
+			Math::clamp(static_cast<int32_t>(Math::round(center.y - radius)), 0, size)
+		);
+		const auto max = godot::Vector2i(
+			Math::clamp(static_cast<int32_t>(Math::round(center.x + radius)), 0, size),
+			Math::clamp(static_cast<int32_t>(Math::round(center.y + radius)), 0, size)
+		);
+
+		// Operate on buffer
+		for (auto x = min.x; x <= max.x; ++x)
+		{
+			for (auto y = min.y; y <= max.y; ++y)
+			{
+				const auto i = get_index(x, y);
+				const auto d = center.distance_to(godot::Vector2(x, y));
+				const auto t = Math::max((real_t)1.0 - (d / radius), (real_t)0.0);
+				buffer.set(i, functor(data[i], x, y, t));
+			}
+		}
+
+		// Apply changes to data
+		for (auto x = min.x; x <= max.x; ++x)
+		{
+			for (auto y = min.y; y <= max.y; ++y)
+			{
+				const auto index = get_index(x, y);
+				data.set(index, buffer[index]);
+			}
+		}
+	}
+
 	void add(const real_t amount, const godot::Vector2& center, const real_t radius, const real_t exp)
 	{
 		if (radius <= 0.0 || amount <= 0.0)
 			return;
-		for_each_pixel(center, radius, [this, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
+		for_each_pixel(center, radius, [this, amount, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
 		{
 			return move_T_towards(data[index], data[index] + amount, t, exp);
 		});
@@ -105,7 +159,7 @@ public:
 
 	void set_pixel(const int32_t x, const int32_t y, const T& value)
 	{
-		data[get_index(x, y)] = value;
+		data.set(get_index(x, y), value);
 	}
 
 	void set_pixel(const godot::Vector2i& p, const T& value)
@@ -128,63 +182,6 @@ private:
 	T move_T_towards(const T from, const T to, const real_t p, const real_t exp)
 	{
 		return from + godot::UtilityFunctions::ease(p, exp) * (to - from);
-	}
-
-	template<typename F>
-	void for_each_pixel(const godot::Vector2& center, const real_t radius, F functor) const
-	{
-		const auto min = godot::Vector2i(
-			Math::clamp(static_cast<int32_t>(Math::round(center.x - radius)), 0, size),
-			Math::clamp(static_cast<int32_t>(Math::round(center.y - radius)), 0, size)
-		);
-		const auto max = godot::Vector2i(
-			Math::clamp(static_cast<int32_t>(Math::round(center.x + radius)), 0, size),
-			Math::clamp(static_cast<int32_t>(Math::round(center.y + radius)), 0, size)
-		);
-		for (auto x = min.x; x <= max.x; ++x)
-		{
-			for (auto y = min.y; y <= min.y; ++y)
-			{
-				const auto d = center.distance_to(godot::Vector2(x, y));
-				const auto t = Math::max((real_t)1.0 - (d / radius), (real_t)0.0);
-				functor(get_index(x, y), x, y, t);
-			}
-		}
-	}
-
-	template<typename F>
-	void for_each_pixel(const godot::Vector2& center, const real_t radius, F functor)
-	{
-		const auto min = godot::Vector2i(
-			Math::clamp(static_cast<int32_t>(Math::round(center.x - radius)), 0, size),
-			Math::clamp(static_cast<int32_t>(Math::round(center.y - radius)), 0, size)
-		);
-		const auto max = godot::Vector2i(
-			Math::clamp(static_cast<int32_t>(Math::round(center.x + radius)), 0, size),
-			Math::clamp(static_cast<int32_t>(Math::round(center.y + radius)), 0, size)
-		);
-
-		// Operate on buffer
-		for (auto x = min.x; x <= max.x; ++x)
-		{
-			for (auto y = min.y; y <= max.y; ++y)
-			{
-				const auto i = get_index(x, y);
-				const auto d = center.distance_to(godot::Vector2(x, y));
-				const auto t = Math::max((real_t)1.0 - (d / radius), (real_t)0.0);
-				buffer[i] = functor(data[i], x, y, t);
-			}
-		}
-
-		// Apply changes to data
-		for (auto x = min.x; x <= max.x; ++x)
-		{
-			for (auto y = min.y; y <= max.y; ++y)
-			{
-				const auto index = get_index(x, y);
-				data[index] = buffer[index];
-			}
-		}
 	}
 
 	godot::Vector<T> data;
