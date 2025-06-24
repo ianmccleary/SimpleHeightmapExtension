@@ -93,16 +93,30 @@ public:
 		return Math::lerp(a, b, ty);
 	}
 
-	T get_pixel(const int32_t x, const int32_t y)
+	T get_pixel(const int32_t x, const int32_t y) const
 	{
 		return data[get_index(x, y)];
 	}
 
-	T get_pixel(const godot::Vector2i& p)
+	T get_pixel(const godot::Vector2i& p) const
 	{
 		return get_pixel(p.x, p.y);
 	}
 
+	void set_pixel(const int32_t x, const int32_t y, const T& value)
+	{
+		data[get_index(x, y)] = value;
+	}
+
+	void set_pixel(const godot::Vector2i& p, const T& value)
+	{
+		set_pixel(p.x, p.y, value);
+	}
+
+	void fill(const T& value)
+	{
+		data.fill(value);
+	}
 
 private:
 
