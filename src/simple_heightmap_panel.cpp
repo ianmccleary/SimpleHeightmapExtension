@@ -27,7 +27,7 @@ SimpleHeightmapPanel::SimpleHeightmapPanel()
 	auto tools_hbox_bottom = memnew(HBoxContainer);
 	add_child(tools_hbox_bottom);
 	create_tool_button(tools_hbox_bottom, TOOL_SMOOTH, "Smooth");
-	create_tool_button(tools_hbox_bottom, TOOL_SET, "Set");
+	create_tool_button(tools_hbox_bottom, TOOL_FLATTEN, "Flatten");
 
 	add_child(memnew(VSeparator));
 

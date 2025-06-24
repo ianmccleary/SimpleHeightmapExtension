@@ -30,7 +30,7 @@ namespace godot
 			TOOL_RAISE,
 			TOOL_LOWER,
 			TOOL_SMOOTH,
-			TOOL_SET,
+			TOOL_FLATTEN,
 			TOOL_MAX
 		};
 
