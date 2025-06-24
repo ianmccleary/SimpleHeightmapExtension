@@ -13,7 +13,7 @@
 #include "simple_heightmap_panel.h"
 
 namespace godot
-{	
+{
 	class SimpleHeightmapEditorPlugin : public EditorPlugin
 	{
 		GDCLASS(SimpleHeightmapEditorPlugin, EditorPlugin);
@@ -26,6 +26,7 @@ namespace godot
 
 		String _get_plugin_name() const override { return "SimpleHeightmapEditor"; }
 
+		void _process(double p_delta) override;
 		bool _handles(Object *p_object) const override;
 		void _make_visible(bool p_visible) override;
 		void _edit(Object *p_object) override;
@@ -33,13 +34,26 @@ namespace godot
 		int32_t _forward_3d_gui_input(Camera3D *p_viewport_camera, const Ref<InputEvent> &p_event) override;
 
 	private:
+		void update_gizmo();
 
-		SimpleHeightmapPanel* heightmap_panel = nullptr;
+		struct PickedPixels
+		{
+			Vector2 center;
+			Vector<Vector2i> coordinates;
+			real_t radius;
+
+			void update(const SimpleHeightmap& heightmap, const Vector3& collision, real_t brush_radius);
+		};
+		PickedPixels picked_pixels;
 
 		SimpleHeightmap* selected_heightmap = nullptr;
+		SimpleHeightmapPanel* heightmap_panel = nullptr;
 
 		MultiMeshInstance3D* gizmo = nullptr;
 		Ref<MultiMesh> gizmo_multimesh = nullptr;
+
+		bool mouse_over = false;
+		bool mouse_pressed = false;
 	};
 }
 

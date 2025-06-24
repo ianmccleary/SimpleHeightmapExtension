@@ -65,90 +65,156 @@ void SimpleHeightmapEditorPlugin::_make_visible(bool p_visible)
 void SimpleHeightmapEditorPlugin::_edit(Object *p_object)
 {
 	selected_heightmap = Object::cast_to<SimpleHeightmap>(p_object);
+	gizmo->set_visible(selected_heightmap != nullptr); // Hide when de-selecting
 }
 
 namespace
 {
-	godot::Dictionary perform_raycast(Camera3D* camera, Vector2 mouse_position)
+	bool try_pick_heightmap(const Camera3D& camera, const Vector2& mouse_position, const SimpleHeightmap* expected_heightmap, Vector3& out_collision)
 	{
-		const auto world = camera ? camera->get_world_3d() : nullptr;
-		const auto space_state = world.is_valid() ? world->get_direct_space_state() : nullptr;
-		if (camera && space_state)
-		{
-			const auto a = camera->project_ray_origin(mouse_position);
-			const auto b = a + camera->project_ray_normal(mouse_position) * 1000.0;
-			const auto query = PhysicsRayQueryParameters3D::create(a, b);
-			return space_state->intersect_ray(query);
-		}
-		return godot::Dictionary();
-	}
+		out_collision = Vector3();
 
-	SimpleHeightmap* get_heightmap_from_collider(Node* collider)
-	{
-		if (collider != nullptr && collider->is_inside_tree())
+		const auto world = camera.get_world_3d();
+		const auto space_state = world.is_valid() ? world->get_direct_space_state() : nullptr;
+		if (space_state != nullptr)
 		{
-			return Object::cast_to<SimpleHeightmap>(collider->get_parent());
+			const auto a = camera.project_ray_origin(mouse_position);
+			const auto b = a + camera.project_ray_normal(mouse_position) * 1000.0;
+			const auto raycast_result = space_state->intersect_ray(PhysicsRayQueryParameters3D::create(a, b));
+
+			const auto collider = Object::cast_to<CollisionObject3D>(raycast_result["collider"]);
+			if (collider != nullptr && collider->get_parent())
+			{
+				const auto picked_heightmap = Object::cast_to<SimpleHeightmap>(collider->get_parent());
+				if (picked_heightmap != nullptr && picked_heightmap == expected_heightmap)
+				{
+					out_collision = static_cast<Vector3>(raycast_result["position"]);
+					return true;
+				}
+			}
 		}
-		return nullptr;
+
+		return false;
+	}
+}
+
+void SimpleHeightmapEditorPlugin::PickedPixels::update(const SimpleHeightmap& heightmap, const Vector3& collision, real_t brush_radius)
+{
+	const auto local_position = heightmap.to_local(collision);
+
+	// Convert the position and range to pixel space
+	center = Vector2(
+		(local_position.x / heightmap.get_mesh_size()) * heightmap.get_data_resolution(),
+		(local_position.z / heightmap.get_mesh_size()) * heightmap.get_data_resolution()
+	);
+
+	// Calculate the min and max bounds
+	radius = (brush_radius / heightmap.get_mesh_size()) * heightmap.get_data_resolution();
+
+	// Gather picked coordinates
+	coordinates.clear();
+	const auto min = Vector2i(
+		Math::clamp(static_cast<int>(Math::round(center.x - radius)), 0, heightmap.get_data_resolution()),
+		Math::clamp(static_cast<int>(Math::round(center.y - radius)), 0, heightmap.get_data_resolution())
+	);
+	const auto max = Vector2i(
+		Math::clamp(static_cast<int>(Math::round(center.x + radius)), 0, heightmap.get_data_resolution()),
+		Math::clamp(static_cast<int>(Math::round(center.y + radius)), 0, heightmap.get_data_resolution())
+	);
+	for (auto x = min.x; x <= max.x; ++x)
+	{
+		for (auto y = min.y; y <= max.y; ++y)
+		{
+			coordinates.push_back(Vector2i(x, y));
+		}
 	}
 }
 
 int32_t SimpleHeightmapEditorPlugin::_forward_3d_gui_input(Camera3D* p_viewport_camera, const Ref<InputEvent>& p_event)
 {
 	auto mouse_event = Ref<InputEventMouse>(p_event);
-	if (mouse_event.is_valid())
+	if (mouse_event.is_valid() && p_viewport_camera != nullptr && selected_heightmap != nullptr)
 	{
-		const auto result = perform_raycast(p_viewport_camera, mouse_event->get_position());
-		const auto hit_heightmap = get_heightmap_from_collider(Object::cast_to<Node>(result["collider"]));
-		if (hit_heightmap != nullptr && hit_heightmap == selected_heightmap)
+		Vector3 hit_position;
+		if (try_pick_heightmap(*p_viewport_camera, mouse_event->get_position(), selected_heightmap, hit_position))
 		{
-			// Collect points to affect
-			const auto collision_point = static_cast<Vector3>(result["position"]);
-			const auto affected_pixel_coordinates = hit_heightmap->get_pixel_coordinates_in_range(collision_point, heightmap_panel->get_brush_radius());
+			mouse_over = true;
 
-			// Handle input and Update gizmos
-			auto mouse_button_event = Ref<InputEventMouseButton>(mouse_event);
-			auto adjust_terrain = mouse_button_event != nullptr && mouse_button_event->get_button_index() == MOUSE_BUTTON_LEFT && mouse_button_event->is_pressed();
-			int32_t i = 0;
-			for (const auto& pixel_coordinate : affected_pixel_coordinates)
-			{
-				const auto global_position = hit_heightmap->pixel_coordinates_to_global_position(pixel_coordinate);
-				const auto d = global_position.distance_to(collision_point);
-				const auto p = Math::max(static_cast<real_t>(1.0) - (d / heightmap_panel->get_brush_radius()), (real_t)0.0);
+			// Update picked pixels
+			picked_pixels.update(*selected_heightmap, hit_position, heightmap_panel->get_brush_radius());
 
-				// Adjust terrain
-				if (adjust_terrain)
-				{
-					hit_heightmap->adjust_height(pixel_coordinate, (real_t)0.1 * p);
-				}
-
-				// Update Gizmos
-				if (i < gizmo_multimesh->get_instance_count())
-				{
-					const auto scale = Math::max(p, (real_t)0.0);
-					Transform3D t;
-					t.set_basis(Basis(Quaternion(), Vector3(scale, scale, scale)));
-					t.set_origin(global_position);
-					gizmo_multimesh->set_instance_transform(i, t);
-				}
-				++i;
-			}
-			gizmo_multimesh->set_visible_instance_count(Math::min(i, gizmo_multimesh->get_instance_count()));
-			gizmo->set_visible(true);
-
-			if (adjust_terrain)
-			{
-				hit_heightmap->rebuild();
-				return AFTER_GUI_INPUT_STOP;
-			}
+			// Update gizmos
+			update_gizmo();
 		}
 		else
 		{
-			// Hide gizmos
+			mouse_over = false;
 			gizmo->set_visible(false);
+		}
+
+		auto mouse_button_event = Ref<InputEventMouseButton>(mouse_event);
+		if (mouse_button_event != nullptr)
+		{
+			if (mouse_button_event->get_button_index() == MOUSE_BUTTON_LEFT)
+			{
+				if (mouse_button_event->is_pressed() && !mouse_pressed && mouse_over)
+				{
+					mouse_pressed = true;
+					return AFTER_GUI_INPUT_STOP;
+				}
+				else if (mouse_button_event->is_released() && mouse_pressed)
+				{
+					mouse_pressed = false;
+					return AFTER_GUI_INPUT_STOP;
+				}
+			}
 		}
 	}
 	return AFTER_GUI_INPUT_PASS;
+}
+
+void SimpleHeightmapEditorPlugin::_process(double p_delta)
+{
+	if (selected_heightmap != nullptr && mouse_pressed && mouse_over)
+	{
+		// Adjust terrain if mouse is pressed
+		for (const auto& coordinate : picked_pixels.coordinates)
+		{
+			const auto d = picked_pixels.center.distance_to(coordinate);
+			const auto p = Math::max((real_t)1.0 - (d / picked_pixels.radius), (real_t)0.0);
+			selected_heightmap->adjust_height(coordinate, (real_t)1.0 * p_delta * p);
+		}
+		selected_heightmap->rebuild();
+		update_gizmo();
+	}
+}
+
+void SimpleHeightmapEditorPlugin::update_gizmo()
+{
+	if (selected_heightmap != nullptr)
+	{
+		int32_t i = 0;
+		for (const auto& coordinate : picked_pixels.coordinates)
+		{
+			const auto d = picked_pixels.center.distance_to(coordinate);
+			const auto p = Math::max(static_cast<real_t>(1.0) - (d / picked_pixels.radius), (real_t)0.0);
+			if (i < gizmo_multimesh->get_instance_count())
+			{
+				const auto scale = Math::max(p, (real_t)0.0);
+				Transform3D t;
+				t.set_basis(Basis(Quaternion(), Vector3(scale, scale, scale)));
+				t.set_origin(selected_heightmap->pixel_coordinates_to_global_position(coordinate));
+				gizmo_multimesh->set_instance_transform(i, t);
+			}
+			++i;
+		}
+		gizmo_multimesh->set_visible_instance_count(Math::min(i, gizmo_multimesh->get_instance_count()));
+		gizmo->set_visible(true);
+	}
+	else
+	{
+		gizmo->set_visible(false);
+	}
 }
 
 #endif // TOOLS_ENABLED

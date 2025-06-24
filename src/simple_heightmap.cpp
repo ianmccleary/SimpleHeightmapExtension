@@ -9,18 +9,15 @@ using namespace godot;
 
 void SimpleHeightmap::_bind_methods()
 {
-	ClassDB::bind_method(D_METHOD("get_mesh_width"), &SimpleHeightmap::get_mesh_width);
-	ClassDB::bind_method(D_METHOD("get_mesh_depth"), &SimpleHeightmap::get_mesh_depth);
+	ClassDB::bind_method(D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
 	ClassDB::bind_method(D_METHOD("get_mesh_resolution"), &SimpleHeightmap::get_mesh_resolution);
 	ClassDB::bind_method(D_METHOD("get_data_resolution"), &SimpleHeightmap::get_data_resolution);
 
-	ClassDB::bind_method(D_METHOD("set_mesh_width", "value"), &SimpleHeightmap::set_mesh_width);
-	ClassDB::bind_method(D_METHOD("set_mesh_depth", "value"), &SimpleHeightmap::set_mesh_depth);
+	ClassDB::bind_method(D_METHOD("set_mesh_size", "value"), &SimpleHeightmap::set_mesh_size);
 	ClassDB::bind_method(D_METHOD("set_mesh_resolution", "value"), &SimpleHeightmap::set_mesh_resolution);
 	ClassDB::bind_method(D_METHOD("set_data_resolution", "value"), &SimpleHeightmap::set_data_resolution);
 
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mesh_width"), "set_mesh_width", "get_mesh_width");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mesh_depth"), "set_mesh_depth", "get_mesh_depth");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mesh_size"), "set_mesh_size", "get_mesh_size");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "data_resolution"), "set_data_resolution", "get_data_resolution");
 
@@ -68,8 +65,7 @@ void SimpleHeightmap::rebuild()
 		const auto quads_per_side = static_cast<int>(Math::round(data_resolution * mesh_resolution));
 		const auto vertices_per_side = quads_per_side + 1;
 
-		const auto dx = (mesh_width / static_cast<real_t>(quads_per_side));
-		const auto dz = (mesh_depth / static_cast<real_t>(quads_per_side));
+		const auto quad_size = (mesh_size / static_cast<real_t>(quads_per_side));
 
 		auto collision_data = PackedFloat32Array();
 
@@ -85,8 +81,8 @@ void SimpleHeightmap::rebuild()
 			for (int64_t x = 0; x < vertices_per_side; ++x)
 			{
 				const auto i = (x % vertices_per_side) + (z * vertices_per_side);
-				const auto px = x * dx;
-				const auto pz = z * dz;
+				const auto px = x * quad_size;
+				const auto pz = z * quad_size;
 				const auto ph = sample_height(Vector3(px, 0.0, pz));
 				vertex_positions[i] = Vector3(px, ph, pz);
 				vertex_uvs[i] = Vector2(px, pz);
@@ -172,22 +168,21 @@ void SimpleHeightmap::rebuild()
 
 		// The heightmap collision shape is always centered and its quads are always a specific size
 		// Move it to the center to align with this heightmap mesh
-		collision_shape_node->set_position(Vector3(mesh_width * 0.5, 0.0, mesh_depth * 0.5));
+		collision_shape_node->set_position(Vector3(mesh_size * (real_t)0.5, 0.0, mesh_size * (real_t)0.5));
 
 		// Rescale it so it matches the size of the heightmap mesh
 		constexpr real_t COLLISION_QUAD_SIZE = 1.0;
-		const real_t actual_heightmap_collision_width = COLLISION_QUAD_SIZE * quads_per_side;
-		const real_t actual_heightmap_collision_depth = COLLISION_QUAD_SIZE* quads_per_side;
+		const real_t actual_heightmap_collision_size = COLLISION_QUAD_SIZE * quads_per_side;
 		collision_shape_node->set_scale(
-			Vector3(mesh_width / actual_heightmap_collision_width, 1.0, mesh_depth / actual_heightmap_collision_depth));
+			Vector3(mesh_size / actual_heightmap_collision_size, 1.0, mesh_size / actual_heightmap_collision_size));
 	}
 }
 
 real_t SimpleHeightmap::sample_height(const Vector3& local_position) const
 {
 	const auto p = Vector2(
-		(local_position.x / mesh_width) * data_resolution,
-		(local_position.z / mesh_depth) * data_resolution
+		(local_position.x / mesh_size) * data_resolution,
+		(local_position.z / mesh_size) * data_resolution
 	);
 	
 	const auto pi = Vector2i(
@@ -213,43 +208,10 @@ void SimpleHeightmap::adjust_height(const Vector2i& pixel_coordinates, real_t am
 	set_height_at(pixel_coordinates, get_height_at(pixel_coordinates) + amount);
 }
 
-Vector<Vector2i> SimpleHeightmap::get_pixel_coordinates_in_range(const Vector3& local_position, const real_t range_radius) const
-{
-	// Convert the position and range to pixel space
-	const auto pixel_position = Vector2(
-		(local_position.x / mesh_width) * data_resolution,
-		(local_position.z / mesh_depth) * data_resolution
-	);
-	const auto pixel_range = Vector2(
-		(range_radius / mesh_width) * data_resolution,
-		(range_radius / mesh_depth) * data_resolution
-	);
-
-	// Calculate the min and max bounds
-	const auto min = Vector2i(
-		Math::clamp(static_cast<int>(Math::round(pixel_position.x - pixel_range.x)), 0, data_resolution),
-		Math::clamp(static_cast<int>(Math::round(pixel_position.y - pixel_range.y)), 0, data_resolution)
-	);
-	const auto max = Vector2i(
-		Math::clamp(static_cast<int>(Math::round(pixel_position.x + pixel_range.x)), 0, data_resolution),
-		Math::clamp(static_cast<int>(Math::round(pixel_position.y + pixel_range.y)), 0, data_resolution)
-	);
-
-	Vector<Vector2i> pixels;
-	for (auto x = min.x; x <= max.x; ++x)
-	{
-		for (auto y = min.y; y <= max.y; ++y)
-		{
-			pixels.push_back(Vector2i(x, y));
-		}
-	}
-	return pixels;
-}
-
 Vector2i SimpleHeightmap::local_position_to_pixel_coordinates(const Vector3& local_position) const
 {
-	const auto px = static_cast<int>(Math::round((local_position.x / mesh_width) * data_resolution));
-	const auto py = static_cast<int>(Math::round((local_position.z / mesh_depth) * data_resolution));
+	const auto px = static_cast<int>(Math::round((local_position.x / mesh_size) * data_resolution));
+	const auto py = static_cast<int>(Math::round((local_position.z / mesh_size) * data_resolution));
 	return Vector2i(
 		Math::clamp(px, 0, data_resolution - 1),
 		Math::clamp(py, 0, data_resolution - 1)
@@ -263,8 +225,8 @@ Vector2i SimpleHeightmap::global_position_to_pixel_coordinates(const Vector3& gl
 
 Vector3 SimpleHeightmap::pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates) const
 {
-	const auto px = (static_cast<real_t>(pixel_coordinates.x) / static_cast<real_t>(data_resolution)) * mesh_width;
-	const auto pz = (static_cast<real_t>(pixel_coordinates.y) / static_cast<real_t>(data_resolution)) * mesh_depth;
+	const auto px = (static_cast<real_t>(pixel_coordinates.x) / static_cast<real_t>(data_resolution)) * mesh_size;
+	const auto pz = (static_cast<real_t>(pixel_coordinates.y) / static_cast<real_t>(data_resolution)) * mesh_size;
 	return Vector3(
 		px,
 		get_height_at(pixel_coordinates),
@@ -293,15 +255,9 @@ void SimpleHeightmap::set_height_at(const Vector2i& p, real_t height)
 	heightmap_data[i] = height;
 }
 
-void SimpleHeightmap::set_mesh_width(const real_t value)
+void SimpleHeightmap::set_mesh_size(const real_t value)
 {
-	mesh_width = value;
-	rebuild();
-}
-
-void SimpleHeightmap::set_mesh_depth(const real_t value)
-{
-	mesh_depth = value;
+	mesh_size = value;
 	rebuild();
 }
 
