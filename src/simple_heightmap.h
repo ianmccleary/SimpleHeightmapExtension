@@ -37,17 +37,22 @@ namespace godot
 
 		real_t sample_height(const Vector3& local_position) const;
 
+		void adjust_height(const Vector2i& pixel_coordinates, real_t amount);
+
 		Vector<Vector2i> get_pixel_coordinates_in_range(const Vector3& local_position, const real_t range_radius) const;
 		
 		Vector2i local_position_to_pixel_coordinates(const Vector3& local_position) const;
+		Vector2i global_position_to_pixel_coordinates(const Vector3& global_position) const;
 
 		Vector3 pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates) const;
+		Vector3 pixel_coordinates_to_global_position(const Vector2i& pixel_coordinates) const;
 	
 	private:
 
 		[[nodiscard]] int get_desired_heightmap_data_size() const { return data_resolution * data_resolution; }
 
 		real_t get_height_at(const Vector2i& p) const;
+		void set_height_at(const Vector2i& p, real_t height);
 
 		void generate_default_heightmap_data();
 		void generate_default_splatmap_data();

@@ -19,7 +19,8 @@ namespace godot
 		SimpleHeightmapPanel();
 		~SimpleHeightmapPanel();
 
-		[[nodiscard]] real_t get_brush_size() const { return brush_size; }
+		[[nodiscard]] real_t get_brush_diameter() const { return brush_size; }
+		[[nodiscard]] real_t get_brush_radius() const { return brush_size * static_cast<real_t>(0.5); }
 
 	private:
 		enum Tools

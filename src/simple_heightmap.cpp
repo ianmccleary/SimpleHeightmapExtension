@@ -208,12 +208,11 @@ real_t SimpleHeightmap::sample_height(const Vector3& local_position) const
 	return Math::lerp(a, b, ty);
 }
 
-// Vector3 SimpleHeightmap::snap_world_position_to_pixel(const Vector3& world_position) const
-// {
-// 	const auto p = local_position_to_pixel_coordinates(to_local(world_position));
-// 	const auto h = get_height_at(p);
-// 	return to_global(pixel_coordinates_to_local_position(p, h));
-// }
+void SimpleHeightmap::adjust_height(const Vector2i& pixel_coordinates, real_t amount)
+{
+	set_height_at(pixel_coordinates, get_height_at(pixel_coordinates) + amount);
+}
+
 Vector<Vector2i> SimpleHeightmap::get_pixel_coordinates_in_range(const Vector3& local_position, const real_t range_radius) const
 {
 	// Convert the position and range to pixel space
@@ -257,6 +256,11 @@ Vector2i SimpleHeightmap::local_position_to_pixel_coordinates(const Vector3& loc
 	);
 }
 
+Vector2i SimpleHeightmap::global_position_to_pixel_coordinates(const Vector3& global_position) const
+{
+	return local_position_to_pixel_coordinates(to_local(global_position));
+}
+
 Vector3 SimpleHeightmap::pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates) const
 {
 	const auto px = (static_cast<real_t>(pixel_coordinates.x) / static_cast<real_t>(data_resolution)) * mesh_width;
@@ -268,12 +272,25 @@ Vector3 SimpleHeightmap::pixel_coordinates_to_local_position(const Vector2i& pix
 	);
 }
 
+Vector3 SimpleHeightmap::pixel_coordinates_to_global_position(const Vector2i& pixel_coordinates) const
+{
+	return to_global(pixel_coordinates_to_local_position(pixel_coordinates));
+}
+
 real_t SimpleHeightmap::get_height_at(const Vector2i& p) const
 {
 	const auto px = Math::clamp(p.x, 0, data_resolution - 1);
 	const auto py = Math::clamp(p.y, 0, data_resolution - 1);
 	const auto i = px + py * data_resolution;
 	return heightmap_data[i];
+}
+
+void SimpleHeightmap::set_height_at(const Vector2i& p, real_t height)
+{
+	const auto px = Math::clamp(p.x, 0, data_resolution - 1);
+	const auto py = Math::clamp(p.y, 0, data_resolution - 1);
+	const auto i = px + py * data_resolution;
+	heightmap_data[i] = height;
 }
 
 void SimpleHeightmap::set_mesh_width(const real_t value)
