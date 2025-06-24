@@ -24,7 +24,7 @@ public:
 	}
 
 	template<typename F>
-	void for_each_pixel(const godot::Vector2& center, const real_t radius, F functor) const
+	void read_pixels(const godot::Vector2& center, const real_t radius, F functor) const
 	{
 		const auto min = godot::Vector2i(
 			Math::clamp(static_cast<int32_t>(Math::round(center.x - radius)), 0, size),
@@ -46,7 +46,7 @@ public:
 	}
 
 	template<typename F>
-	void for_each_pixel(const godot::Vector2& center, const real_t radius, F functor)
+	void write_pixels(const godot::Vector2& center, const real_t radius, F functor)
 	{
 		const auto min = godot::Vector2i(
 			Math::clamp(static_cast<int32_t>(Math::round(center.x - radius)), 0, size),
@@ -84,7 +84,7 @@ public:
 	{
 		if (radius <= 0.0 || amount <= 0.0)
 			return;
-		for_each_pixel(center, radius, [this, amount, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
+		write_pixels(center, radius, [this, amount, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
 		{
 			return move_T_towards(data[index], data[index] + amount, t, exp);
 		});
@@ -94,7 +94,7 @@ public:
 	{
 		if (radius <= 0.0 || strength <= 0.0)
 			return;
-		for_each_pixel(center, radius, [this, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
+		write_pixels(center, radius, [this, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
 		{
 			const auto ia = get_index(x - 1, y);
 			const auto ib = get_index(x + 1, y);
@@ -111,7 +111,7 @@ public:
 			return;
 		real_t average = 0.0;
 		int32_t num_pixels = 0;
-		for_each_pixel(center, radius, [this, &average, &num_pixels](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> void
+		read_pixels(center, radius, [this, &average, &num_pixels](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> void
 		{
 			average += data[index];
 			num_pixels++;
@@ -121,7 +121,7 @@ public:
 			return;
 		
 		average /= num_pixels;
-		for_each_pixel(center, radius, [this, average, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
+		write_pixels(center, radius, [this, average, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
 		{
 			return move_T_towards(data[index], average, t, exp);
 		});
@@ -174,12 +174,12 @@ public:
 
 private:
 
-	int32_t get_index(const int32_t x, const int32_t y)
+	int32_t get_index(const int32_t x, const int32_t y) const
 	{
 		return Math::clamp(x, 0, size) + Math::clamp(y, 0, size) * size;
 	}
 
-	T move_T_towards(const T from, const T to, const real_t p, const real_t exp)
+	static T move_T_towards(const T from, const T to, const real_t p, const real_t exp)
 	{
 		return from + godot::UtilityFunctions::ease(p, exp) * (to - from);
 	}
