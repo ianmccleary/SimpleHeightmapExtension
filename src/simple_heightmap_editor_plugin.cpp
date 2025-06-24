@@ -182,7 +182,7 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 		{
 			const auto d = picked_pixels.center.distance_to(coordinate);
 			const auto p = Math::max((real_t)1.0 - (d / picked_pixels.radius), (real_t)0.0);
-			selected_heightmap->adjust_height(coordinate, (real_t)1.0 * p_delta * p);
+			selected_heightmap->adjust_height(coordinate, (real_t)1.0 * p_delta * p * heightmap_panel->get_brush_strength());
 		}
 		selected_heightmap->rebuild();
 		update_gizmo();

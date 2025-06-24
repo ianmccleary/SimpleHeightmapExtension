@@ -8,6 +8,7 @@
 namespace godot
 {
 	class Button;
+	class Label;
 
 	class SimpleHeightmapPanel : public VBoxContainer
 	{
@@ -21,6 +22,7 @@ namespace godot
 
 		[[nodiscard]] real_t get_brush_diameter() const { return brush_size; }
 		[[nodiscard]] real_t get_brush_radius() const { return brush_size * static_cast<real_t>(0.5); }
+		[[nodiscard]] real_t get_brush_strength() const { return brush_strength; }
 
 	private:
 		enum Tools
@@ -32,16 +34,17 @@ namespace godot
 			TOOL_MAX
 		};
 
-		void create_tool_button(Control* parent, Tools tool, const char* pname);
+		[[maybe_unused]] Button* create_tool_button(Control* parent, Tools tool, const char* text, bool pressed = false);
+		[[maybe_unused]] Label* create_label(Control* parent, const char* text);
 
 		void tool_button_pressed(int tool);
-		void brush_size_changed();
+		void brush_size_changed(double value);
+		void brush_strength_changed(double value);
 
 		Button* tool_button[TOOL_MAX];
 
-		EditorSpinSlider* brush_size_slider = nullptr;
-
 		real_t brush_size;
+		real_t brush_strength;
 	};
 }
 
