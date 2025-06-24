@@ -4,9 +4,13 @@
 #include <godot_cpp/classes/height_map_shape3d.hpp>
 #include <godot_cpp/classes/geometry_instance3d.hpp>
 #include <godot_cpp/classes/static_body3d.hpp>
+#include "square_image.h"
 
 namespace godot
 {
+	using HeightmapImage = SquareImage<real_t>;
+	using SplatmapImage = SquareImage<Color>;
+
 	class SimpleHeightmap : public GeometryInstance3D
 	{
 		GDCLASS(SimpleHeightmap, GeometryInstance3D)
@@ -26,16 +30,18 @@ namespace godot
 		void set_mesh_size(const real_t value);
 		void set_mesh_resolution(const real_t value);
 
-		void set_data_resolution(int value);
+		void set_image_size(int value);
 
 		[[nodiscard]] real_t get_mesh_size() const { return mesh_size; }
 		[[nodiscard]] real_t get_mesh_resolution() const { return mesh_resolution; }
 
-		[[nodiscard]] int get_data_resolution() const { return data_resolution; }
+		[[nodiscard]] int get_image_size() const { return image_size; }
 
-		real_t sample_height(const Vector3& local_position) const;
+		HeightmapImage& get_heightmap_image() { return heightmap_image; }
+		SplatmapImage& get_splatmap_image() { return splatmap_image; }
 
-		void adjust_height(const Vector2i& pixel_coordinates, real_t amount);
+		const HeightmapImage& get_heightmap_image() const { return heightmap_image; }
+		const SplatmapImage& get_splatmap_image() const { return splatmap_image; }
 		
 		Vector2i local_position_to_pixel_coordinates(const Vector3& local_position) const;
 		Vector2i global_position_to_pixel_coordinates(const Vector3& global_position) const;
@@ -45,20 +51,15 @@ namespace godot
 	
 	private:
 
-		[[nodiscard]] int get_desired_heightmap_data_size() const { return data_resolution * data_resolution; }
-
-		real_t get_height_at(const Vector2i& p) const;
-		void set_height_at(const Vector2i& p, real_t height);
-
 		void generate_default_heightmap_data();
 		void generate_default_splatmap_data();
 
 		real_t mesh_size = 4.0; // Mesh size
 		real_t mesh_resolution = 1.0; // Mesh density
 		
-		int data_resolution = 16; // Size of the heightmap image (e.g., 64x64)
-		PackedRealArray heightmap_data;
-		PackedColorArray splatmap_data;
+		int image_size = 16; // Size of the heightmap image (e.g., 64x64)
+		HeightmapImage heightmap_image;
+		SplatmapImage splatmap_image;
 
 		RID mesh_id;
 		PackedVector3Array vertex_positions;

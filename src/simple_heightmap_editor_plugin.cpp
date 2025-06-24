@@ -37,12 +37,12 @@ void SimpleHeightmapEditorPlugin::_enter_tree()
 	add_child(gizmo);
 
 	heightmap_panel = memnew(SimpleHeightmapPanel);
-	add_control_to_container(CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT, heightmap_panel);
 }
 
 void SimpleHeightmapEditorPlugin::_exit_tree()
 {
-	remove_control_from_container(CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT, heightmap_panel);
+	if (heightmap_panel->is_inside_tree())
+		remove_control_from_container(CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT, heightmap_panel);
 	heightmap_panel->queue_free();
 	heightmap_panel = nullptr;
 
@@ -65,7 +65,19 @@ void SimpleHeightmapEditorPlugin::_make_visible(bool p_visible)
 void SimpleHeightmapEditorPlugin::_edit(Object *p_object)
 {
 	selected_heightmap = Object::cast_to<SimpleHeightmap>(p_object);
-	gizmo->set_visible(selected_heightmap != nullptr); // Hide when de-selecting
+
+	// Hide gizmo when de-selecting
+	gizmo->set_visible(selected_heightmap != nullptr);
+
+	// Only show panel if a heightmap is selected
+	if (!heightmap_panel->is_inside_tree() && selected_heightmap != nullptr)
+	{
+		add_control_to_container(CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT, heightmap_panel);
+	}
+	else if (heightmap_panel->is_inside_tree() && selected_heightmap == nullptr)
+	{
+		remove_control_from_container(CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT, heightmap_panel);
+	}
 }
 
 namespace
@@ -98,38 +110,6 @@ namespace
 	}
 }
 
-void SimpleHeightmapEditorPlugin::PickedPixels::update(const SimpleHeightmap& heightmap, const Vector3& collision, real_t brush_radius)
-{
-	const auto local_position = heightmap.to_local(collision);
-
-	// Convert the position and range to pixel space
-	center = Vector2(
-		(local_position.x / heightmap.get_mesh_size()) * heightmap.get_data_resolution(),
-		(local_position.z / heightmap.get_mesh_size()) * heightmap.get_data_resolution()
-	);
-
-	// Calculate the min and max bounds
-	radius = (brush_radius / heightmap.get_mesh_size()) * heightmap.get_data_resolution();
-
-	// Gather picked coordinates
-	coordinates.clear();
-	const auto min = Vector2i(
-		Math::clamp(static_cast<int>(Math::round(center.x - radius)), 0, heightmap.get_data_resolution()),
-		Math::clamp(static_cast<int>(Math::round(center.y - radius)), 0, heightmap.get_data_resolution())
-	);
-	const auto max = Vector2i(
-		Math::clamp(static_cast<int>(Math::round(center.x + radius)), 0, heightmap.get_data_resolution()),
-		Math::clamp(static_cast<int>(Math::round(center.y + radius)), 0, heightmap.get_data_resolution())
-	);
-	for (auto x = min.x; x <= max.x; ++x)
-	{
-		for (auto y = min.y; y <= max.y; ++y)
-		{
-			coordinates.push_back(Vector2i(x, y));
-		}
-	}
-}
-
 int32_t SimpleHeightmapEditorPlugin::_forward_3d_gui_input(Camera3D* p_viewport_camera, const Ref<InputEvent>& p_event)
 {
 	auto mouse_event = Ref<InputEventMouse>(p_event);
@@ -139,18 +119,15 @@ int32_t SimpleHeightmapEditorPlugin::_forward_3d_gui_input(Camera3D* p_viewport_
 		if (try_pick_heightmap(*p_viewport_camera, mouse_event->get_position(), selected_heightmap, hit_position))
 		{
 			mouse_over = true;
-
-			// Update picked pixels
-			picked_pixels.update(*selected_heightmap, hit_position, heightmap_panel->get_brush_radius());
-
-			// Update gizmos
-			update_gizmo();
+			mouse_global_position = hit_position;
+			mouse_pixel_position = selected_heightmap->global_position_to_pixel_coordinates(hit_position);
 		}
 		else
 		{
 			mouse_over = false;
-			gizmo->set_visible(false);
 		}
+
+		update_gizmo();
 
 		auto mouse_button_event = Ref<InputEventMouseButton>(mouse_event);
 		if (mouse_button_event != nullptr)
@@ -177,13 +154,11 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 {
 	if (selected_heightmap != nullptr && mouse_pressed && mouse_over)
 	{
-		// Adjust terrain if mouse is pressed
-		for (const auto& coordinate : picked_pixels.coordinates)
-		{
-			const auto d = picked_pixels.center.distance_to(coordinate);
-			const auto p = Math::max((real_t)1.0 - (d / picked_pixels.radius), (real_t)0.0);
-			selected_heightmap->adjust_height(coordinate, (real_t)1.0 * p_delta * p * heightmap_panel->get_brush_strength());
-		}
+		selected_heightmap->get_heightmap_image().add(
+			heightmap_panel->get_brush_strength() * p_delta,
+			mouse_pixel_position,
+			heightmap_panel->get_brush_radius(),
+			1.0);
 		selected_heightmap->rebuild();
 		update_gizmo();
 	}
@@ -191,23 +166,22 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 
 void SimpleHeightmapEditorPlugin::update_gizmo()
 {
-	if (selected_heightmap != nullptr)
+	if (selected_heightmap != nullptr && mouse_over)
 	{
 		int32_t i = 0;
-		for (const auto& coordinate : picked_pixels.coordinates)
+		selected_heightmap->get_heightmap_image().read_pixels(
+			mouse_pixel_position,
+			heightmap_panel->get_brush_radius(), [this, &i](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> void
 		{
-			const auto d = picked_pixels.center.distance_to(coordinate);
-			const auto p = Math::max(static_cast<real_t>(1.0) - (d / picked_pixels.radius), (real_t)0.0);
 			if (i < gizmo_multimesh->get_instance_count())
 			{
-				const auto scale = Math::max(p, (real_t)0.0);
-				Transform3D t;
-				t.set_basis(Basis(Quaternion(), Vector3(scale, scale, scale)));
-				t.set_origin(selected_heightmap->pixel_coordinates_to_global_position(coordinate));
-				gizmo_multimesh->set_instance_transform(i, t);
+				Transform3D transform;
+				transform.set_basis(Basis(Quaternion(), Vector3(t, t, t)));
+				transform.set_origin(selected_heightmap->pixel_coordinates_to_global_position(Vector2i(x, y)));
+				gizmo_multimesh->set_instance_transform(i, transform);
 			}
-			++i;
-		}
+			i++;
+		});
 		gizmo_multimesh->set_visible_instance_count(Math::min(i, gizmo_multimesh->get_instance_count()));
 		gizmo->set_visible(true);
 	}

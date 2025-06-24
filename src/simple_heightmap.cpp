@@ -11,15 +11,15 @@ void SimpleHeightmap::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
 	ClassDB::bind_method(D_METHOD("get_mesh_resolution"), &SimpleHeightmap::get_mesh_resolution);
-	ClassDB::bind_method(D_METHOD("get_data_resolution"), &SimpleHeightmap::get_data_resolution);
+	ClassDB::bind_method(D_METHOD("get_image_size"), &SimpleHeightmap::get_image_size);
 
 	ClassDB::bind_method(D_METHOD("set_mesh_size", "value"), &SimpleHeightmap::set_mesh_size);
 	ClassDB::bind_method(D_METHOD("set_mesh_resolution", "value"), &SimpleHeightmap::set_mesh_resolution);
-	ClassDB::bind_method(D_METHOD("set_data_resolution", "value"), &SimpleHeightmap::set_data_resolution);
+	ClassDB::bind_method(D_METHOD("set_image_size", "value"), &SimpleHeightmap::set_image_size);
 
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mesh_size"), "set_mesh_size", "get_mesh_size");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "data_resolution"), "set_data_resolution", "get_data_resolution");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "image_size"), "set_image_size", "get_image_size");
 
 	//	PackedRealArray heightmap_data;
 	//	PackedColorArray splatmap_data;
@@ -27,14 +27,9 @@ void SimpleHeightmap::_bind_methods()
 
 void SimpleHeightmap::_enter_tree()
 {
-	if (heightmap_data.is_empty())
-	{
-		generate_default_heightmap_data();
-	}
-	if (splatmap_data.is_empty())
-	{
-		generate_default_splatmap_data();
-	}
+	// TODO: Save and reload data
+	generate_default_heightmap_data();
+	generate_default_splatmap_data();
 
 	const auto rserver = RenderingServer::get_singleton();
 	if (rserver != nullptr)
@@ -57,12 +52,12 @@ void SimpleHeightmap::_exit_tree()
 void SimpleHeightmap::rebuild()
 {
 	const auto rserver = RenderingServer::get_singleton();
-	if (is_inside_tree() && rserver != nullptr && mesh_id.is_valid() && data_resolution > 0 && mesh_resolution > 0.0)
+	if (is_inside_tree() && rserver != nullptr && mesh_id.is_valid() && image_size > 0 && mesh_resolution > 0.0)
 	{
 		rserver->mesh_clear(mesh_id);
 
 		// The expected number of vertices on a given side
-		const auto quads_per_side = static_cast<int>(Math::round(data_resolution * mesh_resolution));
+		const auto quads_per_side = static_cast<int>(Math::round(image_size * mesh_resolution));
 		const auto vertices_per_side = quads_per_side + 1;
 
 		const auto quad_size = (mesh_size / static_cast<real_t>(quads_per_side));
@@ -83,7 +78,7 @@ void SimpleHeightmap::rebuild()
 				const auto i = (x % vertices_per_side) + (z * vertices_per_side);
 				const auto px = x * quad_size;
 				const auto pz = z * quad_size;
-				const auto ph = sample_height(Vector3(px, 0.0, pz));
+				const auto ph = heightmap_image.bilinear_sample(local_position_to_pixel_coordinates(Vector3(px, 0.0, pz)));
 				vertex_positions[i] = Vector3(px, ph, pz);
 				vertex_uvs[i] = Vector2(px, pz);
 				vertex_normals[i] = Vector3();
@@ -178,43 +173,13 @@ void SimpleHeightmap::rebuild()
 	}
 }
 
-real_t SimpleHeightmap::sample_height(const Vector3& local_position) const
-{
-	const auto p = Vector2(
-		(local_position.x / mesh_size) * data_resolution,
-		(local_position.z / mesh_size) * data_resolution
-	);
-	
-	const auto pi = Vector2i(
-		static_cast<int>(p.x),
-		static_cast<int>(p.y)
-	);
-
-	const auto h1 = get_height_at(Vector2i(pi.x, pi.y));
-	const auto h2 = get_height_at(Vector2i(pi.x + 1, pi.y));
-	const auto h3 = get_height_at(Vector2i(pi.x, pi.y + 1));
-	const auto h4 = get_height_at(Vector2i(pi.x + 1, pi.y + 1));
-
-	const auto tx = (p.x - Math::floor(p.x));
-	const auto ty = (p.y - Math::floor(p.y));
-
-	const auto a = Math::lerp(h1, h2, tx);
-	const auto b = Math::lerp(h3, h4, tx);
-	return Math::lerp(a, b, ty);
-}
-
-void SimpleHeightmap::adjust_height(const Vector2i& pixel_coordinates, real_t amount)
-{
-	set_height_at(pixel_coordinates, get_height_at(pixel_coordinates) + amount);
-}
-
 Vector2i SimpleHeightmap::local_position_to_pixel_coordinates(const Vector3& local_position) const
 {
-	const auto px = static_cast<int>(Math::round((local_position.x / mesh_size) * data_resolution));
-	const auto py = static_cast<int>(Math::round((local_position.z / mesh_size) * data_resolution));
+	const auto px = static_cast<int>(Math::round((local_position.x / mesh_size) * image_size));
+	const auto py = static_cast<int>(Math::round((local_position.z / mesh_size) * image_size));
 	return Vector2i(
-		Math::clamp(px, 0, data_resolution - 1),
-		Math::clamp(py, 0, data_resolution - 1)
+		Math::clamp(px, 0, image_size - 1),
+		Math::clamp(py, 0, image_size - 1)
 	);
 }
 
@@ -225,11 +190,11 @@ Vector2i SimpleHeightmap::global_position_to_pixel_coordinates(const Vector3& gl
 
 Vector3 SimpleHeightmap::pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates) const
 {
-	const auto px = (static_cast<real_t>(pixel_coordinates.x) / static_cast<real_t>(data_resolution)) * mesh_size;
-	const auto pz = (static_cast<real_t>(pixel_coordinates.y) / static_cast<real_t>(data_resolution)) * mesh_size;
+	const auto px = (static_cast<real_t>(pixel_coordinates.x) / static_cast<real_t>(image_size)) * mesh_size;
+	const auto pz = (static_cast<real_t>(pixel_coordinates.y) / static_cast<real_t>(image_size)) * mesh_size;
 	return Vector3(
 		px,
-		get_height_at(pixel_coordinates),
+		heightmap_image.get_pixel(pixel_coordinates),
 		pz
 	);
 }
@@ -237,22 +202,6 @@ Vector3 SimpleHeightmap::pixel_coordinates_to_local_position(const Vector2i& pix
 Vector3 SimpleHeightmap::pixel_coordinates_to_global_position(const Vector2i& pixel_coordinates) const
 {
 	return to_global(pixel_coordinates_to_local_position(pixel_coordinates));
-}
-
-real_t SimpleHeightmap::get_height_at(const Vector2i& p) const
-{
-	const auto px = Math::clamp(p.x, 0, data_resolution - 1);
-	const auto py = Math::clamp(p.y, 0, data_resolution - 1);
-	const auto i = px + py * data_resolution;
-	return heightmap_data[i];
-}
-
-void SimpleHeightmap::set_height_at(const Vector2i& p, real_t height)
-{
-	const auto px = Math::clamp(p.x, 0, data_resolution - 1);
-	const auto py = Math::clamp(p.y, 0, data_resolution - 1);
-	const auto i = px + py * data_resolution;
-	heightmap_data[i] = height;
 }
 
 void SimpleHeightmap::set_mesh_size(const real_t value)
@@ -267,34 +216,39 @@ void SimpleHeightmap::set_mesh_resolution(const real_t value)
 	rebuild();
 }
 
-void SimpleHeightmap::set_data_resolution(int value)
+void SimpleHeightmap::set_image_size(int value)
 {
-	data_resolution = Math::max(value, 1);
-	if (heightmap_data.size() != get_desired_heightmap_data_size())
+	image_size = Math::max(value, 1);
+	if (image_size != heightmap_image.get_size())
 	{
 		// TODO: If it's not empty, resize data instead of completely destroying it
 		generate_default_heightmap_data();
+	}
+	if (image_size != splatmap_image.get_size())
+	{
+		// TODO: If it's not empty, resize data instead of completely destroying it
+		generate_default_splatmap_data();
 	}
 	rebuild();
 }
 
 void SimpleHeightmap::generate_default_heightmap_data()
 {
-	heightmap_data.resize(get_desired_heightmap_data_size());
-	for (int x = 0; x < data_resolution; ++x)
+	heightmap_image.resize(image_size);
+	for (int x = 0; x < image_size; ++x)
 	{
-		for (int z = 0; z < data_resolution; ++z)
+		for (int y = 0; y < image_size; ++y)
 		{
-			int i = x + z * data_resolution;
-			heightmap_data[i] = 
-				Math::sin(static_cast<real_t>(x) / static_cast<real_t>(data_resolution) * Math_TAU) *
-				Math::cos(static_cast<real_t>(z) / static_cast<real_t>(data_resolution) * Math_TAU);
+			const auto value = (real_t)(
+				Math::sin(static_cast<real_t>(x) / static_cast<real_t>(image_size) * Math_TAU) *
+				Math::cos(static_cast<real_t>(y) / static_cast<real_t>(image_size) * Math_TAU));
+			heightmap_image.set_pixel(x, y, value);
 		}
 	}
 }
 
 void SimpleHeightmap::generate_default_splatmap_data()
 {
-	splatmap_data.resize(get_desired_heightmap_data_size());
-	splatmap_data.fill(Color());
+	splatmap_image.resize(image_size);
+	splatmap_image.fill(Color());
 }

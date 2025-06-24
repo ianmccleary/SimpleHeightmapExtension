@@ -19,8 +19,8 @@ public:
 	void resize(size_t new_size)
 	{
 		size = new_size;
-		data.resize_zeroed(new_size);
-		buffer.resize_zeroed(new_size);
+		data.resize_zeroed(new_size * new_size);
+		buffer.resize_zeroed(new_size * new_size);
 	}
 
 	template<typename F>
@@ -38,9 +38,10 @@ public:
 		{
 			for (auto y = min.y; y <= min.y; ++y)
 			{
+				const auto i = get_index(x, y);
 				const auto d = center.distance_to(godot::Vector2(x, y));
 				const auto t = Math::max((real_t)1.0 - (d / radius), (real_t)0.0);
-				functor(get_index(x, y), x, y, t);
+				functor(i, x, y, t);
 			}
 		}
 	}
@@ -65,7 +66,7 @@ public:
 				const auto i = get_index(x, y);
 				const auto d = center.distance_to(godot::Vector2(x, y));
 				const auto t = Math::max((real_t)1.0 - (d / radius), (real_t)0.0);
-				buffer.set(i, functor(data[i], x, y, t));
+				buffer.set(i, functor(i, x, y, t));
 			}
 		}
 
@@ -176,7 +177,7 @@ private:
 
 	int32_t get_index(const int32_t x, const int32_t y) const
 	{
-		return Math::clamp(x, 0, size) + Math::clamp(y, 0, size) * size;
+		return Math::clamp(x, 0, size - 1) + Math::clamp(y, 0, size - 1) * size;
 	}
 
 	static T move_T_towards(const T from, const T to, const real_t p, const real_t exp)

@@ -36,15 +36,8 @@ namespace godot
 	private:
 		void update_gizmo();
 
-		struct PickedPixels
-		{
-			Vector2 center;
-			Vector<Vector2i> coordinates;
-			real_t radius;
-
-			void update(const SimpleHeightmap& heightmap, const Vector3& collision, real_t brush_radius);
-		};
-		PickedPixels picked_pixels;
+		Vector3 mouse_global_position;
+		Vector2i mouse_pixel_position;
 
 		SimpleHeightmap* selected_heightmap = nullptr;
 		SimpleHeightmapPanel* heightmap_panel = nullptr;
