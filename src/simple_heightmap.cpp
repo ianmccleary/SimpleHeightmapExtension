@@ -78,7 +78,7 @@ void SimpleHeightmap::rebuild()
 				const auto i = (x % vertices_per_side) + (z * vertices_per_side);
 				const auto px = x * quad_size;
 				const auto pz = z * quad_size;
-				const auto ph = heightmap_image.bilinear_sample(local_position_to_pixel_coordinates(Vector3(px, 0.0, pz)));
+				const auto ph = heightmap_image.bilinear_sample(local_position_to_image_position(Vector3(px, 0.0, pz)));
 				vertex_positions[i] = Vector3(px, ph, pz);
 				vertex_uvs[i] = Vector2(px, pz);
 				vertex_normals[i] = Vector3();
@@ -173,35 +173,31 @@ void SimpleHeightmap::rebuild()
 	}
 }
 
-Vector2i SimpleHeightmap::local_position_to_pixel_coordinates(const Vector3& local_position) const
+Vector2 SimpleHeightmap::local_position_to_image_position(const Vector3& local_position) const
 {
-	const auto px = static_cast<int>(Math::round((local_position.x / mesh_size) * image_size));
-	const auto py = static_cast<int>(Math::round((local_position.z / mesh_size) * image_size));
-	return Vector2i(
-		Math::clamp(px, 0, image_size - 1),
-		Math::clamp(py, 0, image_size - 1)
+	return Vector2(
+		Math::clamp((local_position.x / mesh_size) * image_size, (real_t)0.0, static_cast<real_t>(image_size)),
+		Math::clamp((local_position.z / mesh_size) * image_size, (real_t)0.0, static_cast<real_t>(image_size))
 	);
 }
 
-Vector2i SimpleHeightmap::global_position_to_pixel_coordinates(const Vector3& global_position) const
+Vector2 SimpleHeightmap::global_position_to_image_position(const Vector3& global_position) const
 {
-	return local_position_to_pixel_coordinates(to_local(global_position));
+	return local_position_to_image_position(to_local(global_position));
 }
 
-Vector3 SimpleHeightmap::pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates) const
+Vector3 SimpleHeightmap::image_position_to_local_position(const Vector2& image_position) const
 {
-	const auto px = (static_cast<real_t>(pixel_coordinates.x) / static_cast<real_t>(image_size)) * mesh_size;
-	const auto pz = (static_cast<real_t>(pixel_coordinates.y) / static_cast<real_t>(image_size)) * mesh_size;
 	return Vector3(
-		px,
-		heightmap_image.get_pixel(pixel_coordinates),
-		pz
+		image_position.x / static_cast<real_t>(image_size) * mesh_size,
+		heightmap_image.bilinear_sample(image_position),
+		image_position.y / static_cast<real_t>(image_size) * mesh_size
 	);
 }
 
-Vector3 SimpleHeightmap::pixel_coordinates_to_global_position(const Vector2i& pixel_coordinates) const
+Vector3 SimpleHeightmap::image_position_to_global_position(const Vector2& image_position) const
 {
-	return to_global(pixel_coordinates_to_local_position(pixel_coordinates));
+	return to_global(image_position_to_local_position(image_position));
 }
 
 void SimpleHeightmap::set_mesh_size(const real_t value)

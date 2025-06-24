@@ -120,7 +120,7 @@ int32_t SimpleHeightmapEditorPlugin::_forward_3d_gui_input(Camera3D* p_viewport_
 		{
 			mouse_over = true;
 			mouse_global_position = hit_position;
-			mouse_pixel_position = selected_heightmap->global_position_to_pixel_coordinates(hit_position);
+			mouse_image_position = selected_heightmap->global_position_to_image_position(hit_position);
 		}
 		else
 		{
@@ -156,7 +156,7 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 	{
 		selected_heightmap->get_heightmap_image().add(
 			heightmap_panel->get_brush_strength() * p_delta,
-			mouse_pixel_position,
+			mouse_image_position,
 			heightmap_panel->get_brush_radius(),
 			1.0);
 		selected_heightmap->rebuild();
@@ -170,14 +170,15 @@ void SimpleHeightmapEditorPlugin::update_gizmo()
 	{
 		int32_t i = 0;
 		selected_heightmap->get_heightmap_image().read_pixels(
-			mouse_pixel_position,
-			heightmap_panel->get_brush_radius(), [this, &i](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> void
+			mouse_image_position,
+			heightmap_panel->get_brush_radius(),
+			[this, &i](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> void
 		{
 			if (i < gizmo_multimesh->get_instance_count())
 			{
 				Transform3D transform;
 				transform.set_basis(Basis(Quaternion(), Vector3(t, t, t)));
-				transform.set_origin(selected_heightmap->pixel_coordinates_to_global_position(Vector2i(x, y)));
+				transform.set_origin(selected_heightmap->image_position_to_global_position(Vector2(x, y)));
 				gizmo_multimesh->set_instance_transform(i, transform);
 			}
 			i++;

@@ -26,17 +26,11 @@ public:
 	template<typename F>
 	void read_pixels(const godot::Vector2& center, const real_t radius, F functor) const
 	{
-		const auto min = godot::Vector2i(
-			Math::clamp(static_cast<int32_t>(Math::round(center.x - radius)), 0, size),
-			Math::clamp(static_cast<int32_t>(Math::round(center.y - radius)), 0, size)
-		);
-		const auto max = godot::Vector2i(
-			Math::clamp(static_cast<int32_t>(Math::round(center.x + radius)), 0, size),
-			Math::clamp(static_cast<int32_t>(Math::round(center.y + radius)), 0, size)
-		);
+		const auto min = get_brush_min(center, radius);
+		const auto max = get_brush_max(center, radius);
 		for (auto x = min.x; x <= max.x; ++x)
 		{
-			for (auto y = min.y; y <= min.y; ++y)
+			for (auto y = min.y; y <= max.y; ++y)
 			{
 				const auto i = get_index(x, y);
 				const auto d = center.distance_to(godot::Vector2(x, y));
@@ -49,14 +43,8 @@ public:
 	template<typename F>
 	void write_pixels(const godot::Vector2& center, const real_t radius, F functor)
 	{
-		const auto min = godot::Vector2i(
-			Math::clamp(static_cast<int32_t>(Math::round(center.x - radius)), 0, size),
-			Math::clamp(static_cast<int32_t>(Math::round(center.y - radius)), 0, size)
-		);
-		const auto max = godot::Vector2i(
-			Math::clamp(static_cast<int32_t>(Math::round(center.x + radius)), 0, size),
-			Math::clamp(static_cast<int32_t>(Math::round(center.y + radius)), 0, size)
-		);
+		const auto min = get_brush_min(center, radius);
+		const auto max = get_brush_max(center, radius);
 
 		// Operate on buffer
 		for (auto x = min.x; x <= max.x; ++x)
@@ -128,7 +116,7 @@ public:
 		});
 	}
 
-	T bilinear_sample(const godot::Vector2& p)
+	T bilinear_sample(const godot::Vector2& p) const
 	{		
 		const auto pi = Vector2i(
 			static_cast<int>(p.x),
@@ -178,6 +166,23 @@ private:
 	int32_t get_index(const int32_t x, const int32_t y) const
 	{
 		return Math::clamp(x, 0, size - 1) + Math::clamp(y, 0, size - 1) * size;
+	}
+
+	godot::Vector2i get_brush_min(const godot::Vector2& center, const real_t radius) const
+	{
+		return godot::Vector2i(
+			Math::clamp(static_cast<int32_t>(Math::round(center.x - radius)), 0, size),
+			Math::clamp(static_cast<int32_t>(Math::round(center.y - radius)), 0, size)
+		);
+	}
+
+	godot::Vector2i get_brush_max(const godot::Vector2& center, const real_t radius) const
+	{
+		
+		return godot::Vector2i(
+			Math::clamp(static_cast<int32_t>(Math::round(center.x + radius)), 0, size),
+			Math::clamp(static_cast<int32_t>(Math::round(center.y + radius)), 0, size)
+		);
 	}
 
 	static T move_T_towards(const T from, const T to, const real_t p, const real_t exp)

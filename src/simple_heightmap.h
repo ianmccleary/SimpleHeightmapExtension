@@ -43,11 +43,11 @@ namespace godot
 		const HeightmapImage& get_heightmap_image() const { return heightmap_image; }
 		const SplatmapImage& get_splatmap_image() const { return splatmap_image; }
 		
-		Vector2i local_position_to_pixel_coordinates(const Vector3& local_position) const;
-		Vector2i global_position_to_pixel_coordinates(const Vector3& global_position) const;
+		Vector2 local_position_to_image_position(const Vector3& local_position) const;
+		Vector2 global_position_to_image_position(const Vector3& global_position) const;
 
-		Vector3 pixel_coordinates_to_local_position(const Vector2i& pixel_coordinates) const;
-		Vector3 pixel_coordinates_to_global_position(const Vector2i& pixel_coordinates) const;
+		Vector3 image_position_to_local_position(const Vector2& image_position) const;
+		Vector3 image_position_to_global_position(const Vector2& image_position) const;
 	
 	private:
 

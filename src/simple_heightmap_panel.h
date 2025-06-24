@@ -20,11 +20,6 @@ namespace godot
 		SimpleHeightmapPanel();
 		~SimpleHeightmapPanel();
 
-		[[nodiscard]] real_t get_brush_diameter() const { return brush_size; }
-		[[nodiscard]] real_t get_brush_radius() const { return brush_size * static_cast<real_t>(0.5); }
-		[[nodiscard]] real_t get_brush_strength() const { return brush_strength; }
-
-	private:
 		enum Tools
 		{
 			TOOL_RAISE,
@@ -33,6 +28,14 @@ namespace godot
 			TOOL_FLATTEN,
 			TOOL_MAX
 		};
+
+		[[nodiscard]] real_t get_brush_diameter() const { return brush_size; }
+		[[nodiscard]] real_t get_brush_radius() const { return brush_size * static_cast<real_t>(0.5); }
+		[[nodiscard]] real_t get_brush_exp() const { return brush_exp; }
+		[[nodiscard]] real_t get_brush_strength() const { return brush_strength; }
+		[[nodiscard]] Tools get_current_tool() const { return current_tool; }
+
+	private:
 
 		[[maybe_unused]] Button* create_tool_button(Control* parent, Tools tool, const char* text, bool pressed = false);
 		[[maybe_unused]] Label* create_label(Control* parent, const char* text);
@@ -45,6 +48,8 @@ namespace godot
 
 		real_t brush_size;
 		real_t brush_strength;
+		real_t brush_exp;
+		Tools current_tool;
 	};
 }
 

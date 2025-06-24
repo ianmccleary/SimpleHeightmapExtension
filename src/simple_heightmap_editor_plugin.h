@@ -37,7 +37,7 @@ namespace godot
 		void update_gizmo();
 
 		Vector3 mouse_global_position;
-		Vector2i mouse_pixel_position;
+		Vector2 mouse_image_position;
 
 		SimpleHeightmap* selected_heightmap = nullptr;
 		SimpleHeightmapPanel* heightmap_panel = nullptr;

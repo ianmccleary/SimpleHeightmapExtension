@@ -18,6 +18,8 @@ SimpleHeightmapPanel::SimpleHeightmapPanel()
 {
 	brush_size = 5.0;
 	brush_strength = 1.0;
+	brush_exp = 1.0;
+	current_tool = TOOL_RAISE;
 
 	auto tools_hbox_top = memnew(HBoxContainer);
 	add_child(tools_hbox_top);
@@ -50,6 +52,17 @@ SimpleHeightmapPanel::SimpleHeightmapPanel()
 	brush_strength_slider->set_value(brush_strength);
 	brush_strength_slider->connect("value_changed", callable_mp(this, &SimpleHeightmapPanel::brush_strength_changed));
 	add_child(brush_strength_slider);
+
+	create_label(this, "Brush Ease");
+	auto brush_exp_slider = memnew(EditorSpinSlider);
+	brush_exp_slider->set_max(100.0);
+	brush_exp_slider->set_min(0.0);
+	brush_exp_slider->set_step(0.01);
+	brush_exp_slider->set_allow_greater(true);
+	brush_exp_slider->set_value(brush_exp);
+	brush_exp_slider->connect("value_changed", callable_mp(this, &SimpleHeightmapPanel::brush_strength_changed));
+	add_child(brush_exp_slider);
+
 }
 
 Button* SimpleHeightmapPanel::create_tool_button(Control* parent, Tools tool, const char* text, bool pressed)
@@ -87,6 +100,7 @@ void SimpleHeightmapPanel::tool_button_pressed(int tool)
 	{
 		tool_button[i]->set_pressed(i == tool);
 	}
+	current_tool = static_cast<Tools>(tool);
 }
 
 void SimpleHeightmapPanel::brush_size_changed(double value)
