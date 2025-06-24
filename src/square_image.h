@@ -130,7 +130,7 @@ private:
 		return from + godot::UtilityFunctions::ease(p, exp) * (to - from);
 	}
 
-	template<typename T>
+	template<typename F>
 	void for_each_pixel(const godot::Vector2& center, const real_t radius, F functor) const
 	{
 		const auto min = godot::Vector2i(
