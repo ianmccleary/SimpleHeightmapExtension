@@ -71,7 +71,7 @@ public:
 
 	void add(const real_t amount, const godot::Vector2& center, const real_t radius, const real_t exp)
 	{
-		if (radius <= 0.0 || amount <= 0.0)
+		if (radius <= 0.0 || Math::is_zero_approx(amount))
 			return;
 		write_pixels(center, radius, [this, amount, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
 		{

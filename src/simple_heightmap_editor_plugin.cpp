@@ -154,11 +154,43 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 {
 	if (selected_heightmap != nullptr && mouse_pressed && mouse_over)
 	{
-		selected_heightmap->get_heightmap_image().add(
-			heightmap_panel->get_brush_strength() * p_delta,
-			mouse_image_position,
-			heightmap_panel->get_brush_radius(),
-			1.0);
+		const auto brush_strength = heightmap_panel->get_brush_strength();
+		const auto brush_radius = heightmap_panel->get_brush_radius();
+		const auto brush_exp = heightmap_panel->get_brush_exp();
+		switch (heightmap_panel->get_current_tool())
+		{
+			case SimpleHeightmapPanel::Tools::TOOL_RAISE:
+			selected_heightmap->get_heightmap_image().add(
+				brush_strength * p_delta,
+				mouse_image_position,
+				brush_radius,
+				brush_exp);
+			break;
+
+			case SimpleHeightmapPanel::Tools::TOOL_LOWER:
+			selected_heightmap->get_heightmap_image().add(
+				-brush_strength * p_delta,
+				mouse_image_position,
+				brush_radius,
+				brush_exp);
+			break;
+
+			case SimpleHeightmapPanel::Tools::TOOL_SMOOTH:
+			selected_heightmap->get_heightmap_image().smooth(
+				brush_strength * p_delta,
+				mouse_image_position,
+				brush_radius,
+				brush_exp);
+			break;
+
+			case SimpleHeightmapPanel::Tools::TOOL_FLATTEN:
+			selected_heightmap->get_heightmap_image().flatten(
+				brush_strength * p_delta,
+				mouse_image_position,
+				brush_radius,
+				brush_exp);
+			break;
+		}
 		selected_heightmap->rebuild();
 		update_gizmo();
 	}
