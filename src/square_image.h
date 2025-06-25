@@ -73,7 +73,7 @@ public:
 	{
 		if (radius <= 0.0 || Math::is_zero_approx(amount))
 			return;
-		write_pixels(center, radius, [this, amount, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
+		write_pixels(center, radius, [this, amount, exp](auto index, auto x, auto y, auto t) -> T
 		{
 			return move_T_towards(data[index], data[index] + amount, t, exp);
 		});
@@ -83,7 +83,7 @@ public:
 	{
 		if (radius <= 0.0 || strength <= 0.0)
 			return;
-		write_pixels(center, radius, [this, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
+		write_pixels(center, radius, [this, exp](auto index, auto x, auto y, auto t) -> T
 		{
 			const auto ia = get_index(x - 1, y);
 			const auto ib = get_index(x + 1, y);
@@ -100,7 +100,7 @@ public:
 			return;
 		real_t average = 0.0;
 		int32_t num_pixels = 0;
-		read_pixels(center, radius, [this, &average, &num_pixels](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> void
+		read_pixels(center, radius, [this, &average, &num_pixels](auto index, auto x, auto y, auto t) -> void
 		{
 			average += data[index];
 			num_pixels++;
@@ -110,7 +110,7 @@ public:
 			return;
 		
 		average /= num_pixels;
-		write_pixels(center, radius, [this, average, exp](const int32_t index, const int32_t x, const int32_t y, const real_t t) -> T
+		write_pixels(center, radius, [this, average, exp](auto index, auto x, auto y, auto t) -> T
 		{
 			return move_T_towards(data[index], average, t, exp);
 		});
