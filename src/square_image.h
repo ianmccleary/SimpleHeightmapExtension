@@ -13,7 +13,6 @@ public:
 	SquareImage() = default;
 	~SquareImage() = default;
 
-	[[nodiscard]] const godot::Vector<T>& get_data() const { return data; }
 	[[nodiscard]] int32_t get_size() const { return size; }
 
 	void resize(size_t new_size)
