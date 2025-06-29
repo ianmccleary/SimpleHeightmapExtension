@@ -10,6 +10,7 @@ void SimpleHeightmap::_bind_methods()
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_resolution"), &SimpleHeightmap::get_mesh_resolution);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_image_size"), &SimpleHeightmap::get_image_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_size"), &SimpleHeightmap::get_texture_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_1"), &SimpleHeightmap::get_texture_1);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_2"), &SimpleHeightmap::get_texture_2);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_3"), &SimpleHeightmap::get_texture_3);
@@ -18,6 +19,7 @@ void SimpleHeightmap::_bind_methods()
 	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_size", "value"), &SimpleHeightmap::set_mesh_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_resolution", "value"), &SimpleHeightmap::set_mesh_resolution);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_image_size", "value"), &SimpleHeightmap::set_image_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_size", "value"), &SimpleHeightmap::set_texture_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_1", "new_texture"), &SimpleHeightmap::set_texture_1);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_2", "new_texture"), &SimpleHeightmap::set_texture_2);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_3", "new_texture"), &SimpleHeightmap::set_texture_3);
@@ -26,6 +28,7 @@ void SimpleHeightmap::_bind_methods()
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_size"), "set_mesh_size", "get_mesh_size");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::INT, "image_size"), "set_image_size", "get_image_size");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "texture_size"), "set_texture_size", "get_texture_size");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_1", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_1", "get_texture_1");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_2", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_2", "get_texture_2");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_3", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_3", "get_texture_3");
@@ -89,7 +92,7 @@ void SimpleHeightmap::rebuild()
 				const auto p = godot::Vector3(px, 0.0, pz);
 				const auto py = bilinear_sample(heightmap, local_position_to_image_position(p)).r;
 				vertex_positions[i] = godot::Vector3(px, py, pz);
-				vertex_uvs[i] = godot::Vector2(px, pz);
+				vertex_uvs[i] = godot::Vector2(px, pz) * texture_size;
 				vertex_normals[i] = godot::Vector3();
 				vertex_colors[i] = bilinear_sample(splatmap, local_position_to_image_position(p));
 				collision_data[i] = py;
@@ -230,6 +233,12 @@ void SimpleHeightmap::set_image_size(int value)
 		heightmap->resize(image_size, image_size);
 	if (splatmap.is_valid())
 		splatmap->resize(image_size, image_size);
+	rebuild();
+}
+
+void SimpleHeightmap::set_texture_size(const godot::real_t value)
+{
+	texture_size = godot::Math::max(value, static_cast<godot::real_t>(0.01));
 	rebuild();
 }
 

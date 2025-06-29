@@ -28,6 +28,8 @@ public:
 
 	void set_image_size(int value);
 
+	void set_texture_size(const godot::real_t value);
+
 	void set_texture_1(const godot::Ref<godot::Texture2D>& new_texture) { texture_1 = new_texture; }
 	void set_texture_2(const godot::Ref<godot::Texture2D>& new_texture) { texture_2 = new_texture; }
 	void set_texture_3(const godot::Ref<godot::Texture2D>& new_texture) { texture_3 = new_texture; }
@@ -37,6 +39,8 @@ public:
 	[[nodiscard]] godot::real_t get_mesh_resolution() const { return mesh_resolution; }
 
 	[[nodiscard]] int get_image_size() const { return image_size; }
+
+	[[nodiscard]] godot::real_t get_texture_size() const { return texture_size; }
 	
 	[[nodiscard]] const godot::Ref<godot::Image>& get_heightmap_image() const { return heightmap; }
 	[[nodiscard]] const godot::Ref<godot::Image>& get_splatmap_image() const { return splatmap; }
@@ -63,6 +67,8 @@ private:
 	
 	int image_size = 16; // Size of the heightmap image (e.g., 64x64)
 	godot::Ref<godot::Image> heightmap;
+
+	godot::real_t texture_size = 1.0;
 	godot::Ref<godot::Image> splatmap;
 
 	godot::Ref<godot::Texture2D> texture_1;
