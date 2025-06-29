@@ -96,7 +96,7 @@ void SimpleHeightmapEditorPlugin::create_ui()
 
 		auto radius_slider = UIHelpers::create_editor_spin_slider(brush_radius, 0.0, 25.0, 0.1, true);
 		auto strength_slider = UIHelpers::create_editor_spin_slider(brush_strength, 0.0, 10.0, 0.1, true);
-		auto ease_slider = UIHelpers::create_editor_spin_slider(brush_ease, 0.0, 100.0, 0.01, true);
+		auto ease_slider = UIHelpers::create_editor_spin_slider(brush_ease, 0.0, 2.0, 0.01, true);
 
 		hbox_a->add_child(button_raise);
 		hbox_a->add_child(button_smooth);
