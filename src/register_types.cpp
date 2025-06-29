@@ -4,7 +4,6 @@
 
 #ifdef TOOLS_ENABLED
 #include "simple_heightmap_editor_plugin.h"
-#include "simple_heightmap_panel.h"
 #endif // TOOLS_ENABLED
 
 #include <gdextension_interface.h>
@@ -24,7 +23,6 @@ void initialize_simple_heightmap_module(ModuleInitializationLevel p_level)
 	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR)
 	{
 		GDREGISTER_INTERNAL_CLASS(SimpleHeightmapEditorPlugin);
-		GDREGISTER_INTERNAL_CLASS(SimpleHeightmapPanel);
 		EditorPlugins::add_by_type<SimpleHeightmapEditorPlugin>();
 	}
 #endif // TOOLS_ENABLED

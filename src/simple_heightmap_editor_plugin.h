@@ -2,6 +2,7 @@
 
 #ifdef TOOLS_ENABLED
 
+#include <memory.h>
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/control.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
@@ -10,44 +11,69 @@
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 #include <godot_cpp/classes/ref.hpp>
 #include "simple_heightmap.h"
-#include "simple_heightmap_panel.h"
 
-namespace godot
+class SimpleHeightmapEditorPlugin : public godot::EditorPlugin
 {
-	class SimpleHeightmapEditorPlugin : public EditorPlugin
+	GDCLASS(SimpleHeightmapEditorPlugin, godot::EditorPlugin);
+
+public:
+	static void _bind_methods();
+
+	void _enter_tree() override;
+	void _exit_tree() override;
+
+	godot::String _get_plugin_name() const override { return "SimpleHeightmapEditor"; }
+
+	void _process(double p_delta) override;
+	bool _handles(godot::Object *p_object) const override;
+	void _make_visible(bool p_visible) override;
+	void _edit(godot::Object *p_object) override;
+
+	int32_t _forward_3d_gui_input(godot::Camera3D *p_viewport_camera, const godot::Ref<godot::InputEvent> &p_event) override;
+
+private:
+	enum class Tool : uint8_t
 	{
-		GDCLASS(SimpleHeightmapEditorPlugin, EditorPlugin);
-
-	public:
-		static void _bind_methods();
-
-		void _enter_tree() override;
-		void _exit_tree() override;
-
-		String _get_plugin_name() const override { return "SimpleHeightmapEditor"; }
-
-		void _process(double p_delta) override;
-		bool _handles(Object *p_object) const override;
-		void _make_visible(bool p_visible) override;
-		void _edit(Object *p_object) override;
-
-		int32_t _forward_3d_gui_input(Camera3D *p_viewport_camera, const Ref<InputEvent> &p_event) override;
-
-	private:
-		void update_gizmo();
-
-		Vector3 mouse_global_position;
-		Vector2 mouse_image_position;
-
-		SimpleHeightmap* selected_heightmap = nullptr;
-		SimpleHeightmapPanel* heightmap_panel = nullptr;
-
-		MultiMeshInstance3D* gizmo = nullptr;
-		Ref<MultiMesh> gizmo_multimesh = nullptr;
-
-		bool mouse_over = false;
-		bool mouse_pressed = false;
+		None,
+		Heightmap_Raise,
+		Heightmap_Smooth,
+		Heightmap_Flatten
 	};
-}
+
+	void create_ui();
+	void destroy_ui();
+
+	void on_tool_selected(uint8_t tool);
+	void on_brush_radius_changed(double value);
+	void on_brush_strength_changed(double value);
+	void on_brush_ease_changed(double value);
+
+	static godot::Color get_pixel_safe(const godot::Ref<godot::Image>& image, int32_t x, int32_t y);
+	static godot::Color color_move_towards(const godot::Color& input, const godot::Color& target, double delta);
+
+	godot::Color modify_pixel(const godot::Ref<godot::Image>& image, int32_t x, int32_t y, double t, double delta);
+
+	godot::Vector3 mouse_global_position;
+	godot::Vector2 mouse_image_position;
+
+	SimpleHeightmap* selected_heightmap = nullptr;
+	Tool selected_tool = Tool::None;
+
+	godot::Control* ui = nullptr;
+	godot::Button* button_raise = nullptr;
+	godot::Button* button_smooth = nullptr;
+	godot::Button* button_flatten = nullptr;
+
+	godot::MultiMeshInstance3D* gizmo = nullptr;
+	godot::Ref<godot::MultiMesh> gizmo_multimesh = nullptr;
+
+	double brush_radius;
+	double brush_strength;
+	double brush_ease;
+
+	bool mouse_over = false;
+	bool mouse_pressed = false;
+	bool alt_pressed = false;
+};
 
 #endif // TOOLS_ENABLED

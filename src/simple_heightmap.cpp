@@ -5,24 +5,19 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/math.hpp>
 
-using namespace godot;
-
 void SimpleHeightmap::_bind_methods()
 {
-	ClassDB::bind_method(D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
-	ClassDB::bind_method(D_METHOD("get_mesh_resolution"), &SimpleHeightmap::get_mesh_resolution);
-	ClassDB::bind_method(D_METHOD("get_image_size"), &SimpleHeightmap::get_image_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_resolution"), &SimpleHeightmap::get_mesh_resolution);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_image_size"), &SimpleHeightmap::get_image_size);
 
-	ClassDB::bind_method(D_METHOD("set_mesh_size", "value"), &SimpleHeightmap::set_mesh_size);
-	ClassDB::bind_method(D_METHOD("set_mesh_resolution", "value"), &SimpleHeightmap::set_mesh_resolution);
-	ClassDB::bind_method(D_METHOD("set_image_size", "value"), &SimpleHeightmap::set_image_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_size", "value"), &SimpleHeightmap::set_mesh_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_resolution", "value"), &SimpleHeightmap::set_mesh_resolution);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_image_size", "value"), &SimpleHeightmap::set_image_size);
 
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mesh_size"), "set_mesh_size", "get_mesh_size");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "image_size"), "set_image_size", "get_image_size");
-
-	//	PackedRealArray heightmap_data;
-	//	PackedColorArray splatmap_data;
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_size"), "set_mesh_size", "get_mesh_size");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::INT, "image_size"), "set_image_size", "get_image_size");
 }
 
 void SimpleHeightmap::_enter_tree()
@@ -31,7 +26,7 @@ void SimpleHeightmap::_enter_tree()
 	generate_default_heightmap_data();
 	generate_default_splatmap_data();
 
-	const auto rserver = RenderingServer::get_singleton();
+	const auto rserver = godot::RenderingServer::get_singleton();
 	if (rserver != nullptr)
 	{
 		mesh_id = rserver->mesh_create();
@@ -42,7 +37,7 @@ void SimpleHeightmap::_enter_tree()
 
 void SimpleHeightmap::_exit_tree()
 {
-	const auto rserver = RenderingServer::get_singleton();
+	const auto rserver = godot::RenderingServer::get_singleton();
 	if (rserver != nullptr)
 	{
 		rserver->free_rid(mesh_id);
@@ -51,18 +46,18 @@ void SimpleHeightmap::_exit_tree()
 
 void SimpleHeightmap::rebuild()
 {
-	const auto rserver = RenderingServer::get_singleton();
+	const auto rserver = godot::RenderingServer::get_singleton();
 	if (is_inside_tree() && rserver != nullptr && mesh_id.is_valid() && image_size > 0 && mesh_resolution > 0.0)
 	{
 		rserver->mesh_clear(mesh_id);
 
 		// The expected number of vertices on a given side
-		const auto quads_per_side = static_cast<int>(Math::round(image_size * mesh_resolution));
+		const auto quads_per_side = static_cast<int>(godot::Math::round(image_size * mesh_resolution));
 		const auto vertices_per_side = quads_per_side + 1;
 
-		const auto quad_size = (mesh_size / static_cast<real_t>(quads_per_side));
+		const auto quad_size = (mesh_size / static_cast<godot::real_t>(quads_per_side));
 
-		auto collision_data = PackedFloat32Array();
+		auto collision_data = godot::PackedFloat32Array();
 
 		// Calculate Position, UV and Collision Height
 		// Reset Normal
@@ -78,10 +73,10 @@ void SimpleHeightmap::rebuild()
 				const auto i = (x % vertices_per_side) + (z * vertices_per_side);
 				const auto px = x * quad_size;
 				const auto pz = z * quad_size;
-				const auto ph = heightmap_image.bilinear_sample(local_position_to_image_position(Vector3(px, 0.0, pz)));
-				vertex_positions[i] = Vector3(px, ph, pz);
-				vertex_uvs[i] = Vector2(px, pz);
-				vertex_normals[i] = Vector3();
+				const auto ph = bilinear_sample(heightmap, local_position_to_image_position(godot::Vector3(px, 0.0, pz))).r;
+				vertex_positions[i] = godot::Vector3(px, ph, pz);
+				vertex_uvs[i] = godot::Vector2(px, pz);
+				vertex_normals[i] = godot::Vector3();
 				collision_data[i] = ph;
 			}
 		}
@@ -129,30 +124,30 @@ void SimpleHeightmap::rebuild()
 			vertex_normals[i].normalize();
 		
 		// Submit to data rendering server
-		Array arrays;
-		arrays.resize(Mesh::ARRAY_MAX);
-		arrays[Mesh::ARRAY_VERTEX] = vertex_positions;
-		arrays[Mesh::ARRAY_TEX_UV] = vertex_uvs;
-		arrays[Mesh::ARRAY_NORMAL] = vertex_normals;
-		arrays[Mesh::ARRAY_INDEX] = indices;
-		rserver->mesh_add_surface_from_arrays(mesh_id, RenderingServer::PrimitiveType::PRIMITIVE_TRIANGLES, arrays);
+		godot::Array arrays;
+		arrays.resize(godot::Mesh::ARRAY_MAX);
+		arrays[godot::Mesh::ARRAY_VERTEX] = vertex_positions;
+		arrays[godot::Mesh::ARRAY_TEX_UV] = vertex_uvs;
+		arrays[godot::Mesh::ARRAY_NORMAL] = vertex_normals;
+		arrays[godot::Mesh::ARRAY_INDEX] = indices;
+		rserver->mesh_add_surface_from_arrays(mesh_id, godot::RenderingServer::PrimitiveType::PRIMITIVE_TRIANGLES, arrays);
 
 		// Rebuild collision
 		if (collision_body == nullptr)
 		{
-			collision_body = memnew(StaticBody3D);
+			collision_body = memnew(godot::StaticBody3D);
 			add_child(collision_body);
 			collision_body->set_owner(this);
 		}
 		if (collision_shape_node == nullptr)
 		{
-			collision_shape_node = memnew(CollisionShape3D);
+			collision_shape_node = memnew(godot::CollisionShape3D);
 			collision_body->add_child(collision_shape_node);
 			collision_shape_node->set_owner(this);
 		}
 		if (collision_shape.is_null())
 		{
-			collision_shape = Ref<HeightMapShape3D>(memnew(HeightMapShape3D));
+			collision_shape.instantiate();
 			collision_shape_node->set_shape(collision_shape);
 		}
 
@@ -163,88 +158,117 @@ void SimpleHeightmap::rebuild()
 
 		// The heightmap collision shape is always centered and its quads are always a specific size
 		// Move it to the center to align with this heightmap mesh
-		collision_shape_node->set_position(Vector3(mesh_size * (real_t)0.5, 0.0, mesh_size * (real_t)0.5));
+		collision_shape_node->set_position(godot::Vector3(mesh_size * (godot::real_t)0.5, 0.0, mesh_size * (godot::real_t)0.5));
 
 		// Rescale it so it matches the size of the heightmap mesh
-		constexpr real_t COLLISION_QUAD_SIZE = 1.0;
-		const real_t actual_heightmap_collision_size = COLLISION_QUAD_SIZE * quads_per_side;
+		constexpr godot::real_t COLLISION_QUAD_SIZE = 1.0;
+		const godot::real_t actual_heightmap_collision_size = COLLISION_QUAD_SIZE * quads_per_side;
 		collision_shape_node->set_scale(
-			Vector3(mesh_size / actual_heightmap_collision_size, 1.0, mesh_size / actual_heightmap_collision_size));
+			godot::Vector3(mesh_size / actual_heightmap_collision_size, 1.0, mesh_size / actual_heightmap_collision_size));
 	}
 }
 
-Vector2 SimpleHeightmap::local_position_to_image_position(const Vector3& local_position) const
+godot::Vector2 SimpleHeightmap::local_position_to_image_position(const godot::Vector3& local_position) const
 {
-	return Vector2(
-		Math::clamp((local_position.x / mesh_size) * image_size, (real_t)0.0, static_cast<real_t>(image_size)),
-		Math::clamp((local_position.z / mesh_size) * image_size, (real_t)0.0, static_cast<real_t>(image_size))
+	return godot::Vector2(
+		godot::Math::clamp((local_position.x / mesh_size) * image_size, (godot::real_t)0.0, static_cast<godot::real_t>(image_size)),
+		godot::Math::clamp((local_position.z / mesh_size) * image_size, (godot::real_t)0.0, static_cast<godot::real_t>(image_size))
 	);
 }
 
-Vector2 SimpleHeightmap::global_position_to_image_position(const Vector3& global_position) const
+godot::Vector2 SimpleHeightmap::global_position_to_image_position(const godot::Vector3& global_position) const
 {
 	return local_position_to_image_position(to_local(global_position));
 }
 
-Vector3 SimpleHeightmap::image_position_to_local_position(const Vector2& image_position) const
+godot::Vector3 SimpleHeightmap::image_position_to_local_position(const godot::Vector2& image_position) const
 {
-	return Vector3(
-		image_position.x / static_cast<real_t>(image_size) * mesh_size,
-		heightmap_image.bilinear_sample(image_position),
-		image_position.y / static_cast<real_t>(image_size) * mesh_size
+	return godot::Vector3(
+		image_position.x / static_cast<godot::real_t>(image_size) * mesh_size,
+		bilinear_sample(heightmap, image_position).r,
+		image_position.y / static_cast<godot::real_t>(image_size) * mesh_size
 	);
 }
 
-Vector3 SimpleHeightmap::image_position_to_global_position(const Vector2& image_position) const
+godot::Vector3 SimpleHeightmap::image_position_to_global_position(const godot::Vector2& image_position) const
 {
 	return to_global(image_position_to_local_position(image_position));
 }
 
-void SimpleHeightmap::set_mesh_size(const real_t value)
+void SimpleHeightmap::set_mesh_size(const godot::real_t value)
 {
 	mesh_size = value;
 	rebuild();
 }
 
-void SimpleHeightmap::set_mesh_resolution(const real_t value)
+void SimpleHeightmap::set_mesh_resolution(const godot::real_t value)
 {
-	mesh_resolution = Math::max(value, static_cast<real_t>(0.1));
+	mesh_resolution = godot::Math::max(value, static_cast<godot::real_t>(0.1));
 	rebuild();
 }
 
 void SimpleHeightmap::set_image_size(int value)
 {
-	image_size = Math::max(value, 1);
-	if (image_size != heightmap_image.get_size())
-	{
-		// TODO: If it's not empty, resize data instead of completely destroying it
-		generate_default_heightmap_data();
-	}
-	if (image_size != splatmap_image.get_size())
-	{
-		// TODO: If it's not empty, resize data instead of completely destroying it
-		generate_default_splatmap_data();
-	}
+	image_size = godot::Math::max(value, 1);
+	if (heightmap.is_valid())
+		heightmap->resize(image_size, image_size);
+	if (splatmap.is_valid())
+		splatmap->resize(image_size, image_size);
 	rebuild();
 }
 
 void SimpleHeightmap::generate_default_heightmap_data()
 {
-	heightmap_image.resize(image_size);
+	heightmap = godot::Image::create(image_size, image_size, false, godot::Image::FORMAT_RF);
+	heightmap->resize(image_size, image_size);
 	for (int x = 0; x < image_size; ++x)
 	{
 		for (int y = 0; y < image_size; ++y)
 		{
-			const auto value = (real_t)(
-				Math::sin(static_cast<real_t>(x) / static_cast<real_t>(image_size) * Math_TAU) *
-				Math::cos(static_cast<real_t>(y) / static_cast<real_t>(image_size) * Math_TAU));
-			heightmap_image.set_pixel(x, y, value);
+			const auto value = (godot::real_t)(
+				godot::Math::sin(static_cast<godot::real_t>(x) / static_cast<godot::real_t>(image_size) * Math_TAU) *
+				godot::Math::cos(static_cast<godot::real_t>(y) / static_cast<godot::real_t>(image_size) * Math_TAU));
+			heightmap->set_pixel(x, y, godot::Color(value, 0.0, 0.0, 0.0));
 		}
 	}
 }
 
 void SimpleHeightmap::generate_default_splatmap_data()
 {
-	splatmap_image.resize(image_size);
-	splatmap_image.fill(Color());
+	splatmap = godot::Image::create(image_size, image_size, false, godot::Image::FORMAT_RGBA8);
+	splatmap->fill(godot::Color(0.f, 0.f, 0.f, 0.f));
+}
+
+namespace
+{
+	godot::Vector2i get_offset_coordinate(const godot::Vector2i& origin, int32_t offset_x, int32_t offset_y, godot::Ref<godot::Image> image)
+	{
+		return godot::Vector2i(
+			godot::Math::clamp(origin.x + offset_x, 0, image->get_width() - 1),
+			godot::Math::clamp(origin.y + offset_y, 0, image->get_height() - 1)
+		);
+	}
+}
+
+godot::Color SimpleHeightmap::bilinear_sample(const godot::Ref<godot::Image>& image, const godot::Vector2& point)
+{
+	const auto w = image->get_width();
+	const auto h = image->get_height();
+
+	const auto pi = godot::Vector2i(
+		godot::Math::clamp(static_cast<int>(point.x), 0, w - 1),
+		godot::Math::clamp(static_cast<int>(point.y), 0, h - 1)
+	);
+
+	const auto v1 = image->get_pixelv(get_offset_coordinate(pi, 0, 0, image));
+	const auto v2 = image->get_pixelv(get_offset_coordinate(pi, 1, 0, image));
+	const auto v3 = image->get_pixelv(get_offset_coordinate(pi, 0, 1, image));
+	const auto v4 = image->get_pixelv(get_offset_coordinate(pi, 1, 1, image));
+
+	const auto tx = (point.x - godot::Math::floor(point.x));
+	const auto ty = (point.y - godot::Math::floor(point.y));
+
+	const auto a = v1.lerp(v2, tx);
+	const auto b = v3.lerp(v4, tx);
+	return a.lerp(b, ty);
 }
