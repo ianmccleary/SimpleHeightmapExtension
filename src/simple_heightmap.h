@@ -38,8 +38,8 @@ public:
 
 	[[nodiscard]] int get_image_size() const { return image_size; }
 	
-	[[nodiscard]] godot::Ref<godot::Image> get_heightmap_image() const { return heightmap; }
-	[[nodiscard]] godot::Ref<godot::Image> get_splatmap_image() const { return splatmap; }
+	[[nodiscard]] const godot::Ref<godot::Image>& get_heightmap_image() const { return heightmap; }
+	[[nodiscard]] const godot::Ref<godot::Image>& get_splatmap_image() const { return splatmap; }
 
 	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_1() const { return texture_1; }
 	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_2() const { return texture_2; }
@@ -74,6 +74,7 @@ private:
 	godot::PackedVector3Array vertex_positions;
 	godot::PackedVector2Array vertex_uvs;
 	godot::PackedVector3Array vertex_normals;
+	godot::PackedColorArray vertex_colors;
 	godot::PackedInt32Array indices;
 
 	godot::StaticBody3D* collision_body = nullptr;

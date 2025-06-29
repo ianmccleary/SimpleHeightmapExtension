@@ -77,6 +77,7 @@ void SimpleHeightmap::rebuild()
 		vertex_positions.resize(vertex_count);
 		vertex_uvs.resize(vertex_count);
 		vertex_normals.resize(vertex_count);
+		vertex_colors.resize(vertex_count);
 		collision_data.resize(vertex_count);
 		for (int64_t z = 0; z < vertices_per_side; ++z)
 		{
@@ -85,11 +86,13 @@ void SimpleHeightmap::rebuild()
 				const auto i = (x % vertices_per_side) + (z * vertices_per_side);
 				const auto px = x * quad_size;
 				const auto pz = z * quad_size;
-				const auto ph = bilinear_sample(heightmap, local_position_to_image_position(godot::Vector3(px, 0.0, pz))).r;
-				vertex_positions[i] = godot::Vector3(px, ph, pz);
+				const auto p = godot::Vector3(px, 0.0, pz);
+				const auto py = bilinear_sample(heightmap, local_position_to_image_position(p)).r;
+				vertex_positions[i] = godot::Vector3(px, py, pz);
 				vertex_uvs[i] = godot::Vector2(px, pz);
 				vertex_normals[i] = godot::Vector3();
-				collision_data[i] = ph;
+				vertex_colors[i] = bilinear_sample(splatmap, local_position_to_image_position(p));
+				collision_data[i] = py;
 			}
 		}
 
@@ -141,6 +144,7 @@ void SimpleHeightmap::rebuild()
 		arrays[godot::Mesh::ARRAY_VERTEX] = vertex_positions;
 		arrays[godot::Mesh::ARRAY_TEX_UV] = vertex_uvs;
 		arrays[godot::Mesh::ARRAY_NORMAL] = vertex_normals;
+		arrays[godot::Mesh::ARRAY_COLOR] = vertex_colors;
 		arrays[godot::Mesh::ARRAY_INDEX] = indices;
 		rserver->mesh_add_surface_from_arrays(mesh_id, godot::RenderingServer::PrimitiveType::PRIMITIVE_TRIANGLES, arrays);
 
@@ -248,7 +252,7 @@ void SimpleHeightmap::generate_default_heightmap_data()
 void SimpleHeightmap::generate_default_splatmap_data()
 {
 	splatmap = godot::Image::create(image_size, image_size, false, godot::Image::FORMAT_RGBA8);
-	splatmap->fill(godot::Color(0.f, 0.f, 0.f, 0.f));
+	splatmap->fill(godot::Color(0.5f, 0.f, 0.5f, 0.f));
 }
 
 namespace

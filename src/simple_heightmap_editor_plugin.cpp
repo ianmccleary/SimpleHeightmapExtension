@@ -45,13 +45,14 @@ void SimpleHeightmapEditorPlugin::_enter_tree()
 
 namespace UIHelpers
 {
-	godot::Button* create_button(const char* text, bool toggle_mode)
+	godot::Button* create_button(const char* text, bool toggle_mode, bool pressed)
 	{
 		constexpr auto THEME_FLAT_BUTTON = "FlatButton";
 
 		auto button = memnew(godot::Button);
 		button->set_text(text);
 		button->set_toggle_mode(toggle_mode);
+		button->set_pressed(pressed);
 		if (toggle_mode)
 		{
 			button->set_theme_type_variation(THEME_FLAT_BUTTON);
@@ -89,10 +90,15 @@ void SimpleHeightmapEditorPlugin::create_ui()
 		ui = memnew(godot::VBoxContainer);
 
 		auto hbox_a = memnew(godot::HBoxContainer);
+		auto hbox_b = memnew(godot::HBoxContainer);
 
-		button_raise = UIHelpers::create_button("Raise/Lower", true);
-		button_smooth = UIHelpers::create_button("Smooth", true);
-		button_flatten = UIHelpers::create_button("Flatten", true);
+		button_raise = UIHelpers::create_button("Raise/Lower", true, true);
+		button_smooth = UIHelpers::create_button("Smooth", true, false);
+		button_flatten = UIHelpers::create_button("Flatten", true, false);
+		button_texture_1 = UIHelpers::create_button("Texture 1", true, false);
+		button_texture_2 = UIHelpers::create_button("Texture 2", true, false);
+		button_texture_3 = UIHelpers::create_button("Texture 3", true, false);
+		button_texture_4 = UIHelpers::create_button("Texture 4", true, false);
 
 		auto radius_slider = UIHelpers::create_editor_spin_slider(brush_radius, 0.0, 25.0, 0.1, true);
 		auto strength_slider = UIHelpers::create_editor_spin_slider(brush_strength, 0.0, 10.0, 0.1, true);
@@ -102,7 +108,13 @@ void SimpleHeightmapEditorPlugin::create_ui()
 		hbox_a->add_child(button_smooth);
 		hbox_a->add_child(button_flatten);
 		ui->add_child(hbox_a);
-
+		
+		hbox_b->add_child(button_texture_1);
+		hbox_b->add_child(button_texture_2);
+		hbox_b->add_child(button_texture_3);
+		hbox_b->add_child(button_texture_4);
+		ui->add_child(hbox_b);
+		
 		ui->add_child(UIHelpers::create_label("Radius"));
 		ui->add_child(radius_slider);
 
@@ -115,6 +127,10 @@ void SimpleHeightmapEditorPlugin::create_ui()
 		button_raise->connect(SIGNAL_PRESSED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_tool_selected).bind(static_cast<uint8_t>(Tool::Heightmap_Raise)));
 		button_smooth->connect(SIGNAL_PRESSED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_tool_selected).bind(static_cast<uint8_t>(Tool::Heightmap_Smooth)));
 		button_flatten->connect(SIGNAL_PRESSED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_tool_selected).bind(static_cast<uint8_t>(Tool::Heightmap_Flatten)));
+		button_texture_1->connect(SIGNAL_PRESSED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_tool_selected).bind(static_cast<uint8_t>(Tool::Splatmap_Texture1)));
+		button_texture_2->connect(SIGNAL_PRESSED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_tool_selected).bind(static_cast<uint8_t>(Tool::Splatmap_Texture2)));
+		button_texture_3->connect(SIGNAL_PRESSED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_tool_selected).bind(static_cast<uint8_t>(Tool::Splatmap_Texture3)));
+		button_texture_4->connect(SIGNAL_PRESSED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_tool_selected).bind(static_cast<uint8_t>(Tool::Splatmap_Texture4)));
 		radius_slider->connect(SIGNAL_VALUE_CHANGED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_brush_radius_changed));
 		strength_slider->connect(SIGNAL_VALUE_CHANGED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_brush_strength_changed));
 		ease_slider->connect(SIGNAL_VALUE_CHANGED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_brush_ease_changed));
@@ -128,6 +144,10 @@ void SimpleHeightmapEditorPlugin::on_tool_selected(uint8_t tool_index)
 	button_raise->set_pressed(selected_tool == Tool::Heightmap_Raise);
 	button_smooth->set_pressed(selected_tool == Tool::Heightmap_Smooth);
 	button_flatten->set_pressed(selected_tool == Tool::Heightmap_Flatten);
+	button_texture_1->set_pressed(selected_tool == Tool::Splatmap_Texture1);
+	button_texture_2->set_pressed(selected_tool == Tool::Splatmap_Texture2);
+	button_texture_3->set_pressed(selected_tool == Tool::Splatmap_Texture3);
+	button_texture_4->set_pressed(selected_tool == Tool::Splatmap_Texture4);
 }
 
 void SimpleHeightmapEditorPlugin::on_brush_radius_changed(double value)
@@ -276,8 +296,7 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 {
 	if (selected_heightmap != nullptr && selected_tool != Tool::None && mouse_over)
 	{
-		// TODO: Choose splatmap when using splatmap tools
-		auto image = selected_heightmap->get_heightmap_image();
+		auto image = get_affected_image(selected_tool, *selected_heightmap);
 
 		const auto min = godot::Vector2i(
 			godot::Math::clamp(static_cast<int32_t>(godot::Math::round(mouse_image_position.x - brush_radius)), 0, image->get_width()),
@@ -377,6 +396,26 @@ godot::Color SimpleHeightmapEditorPlugin::modify_pixel(const godot::Ref<godot::I
 	{
 		// Flatten
 		pixel = color_move_towards(pixel, godot::Color(flatten_target, 0.0, 0.0, 0.0), brush_strength * t * delta);
+	}
+	else if (selected_tool == Tool::Splatmap_Texture1)
+	{
+		// Paint texture 1
+		pixel = color_move_towards(pixel, godot::Color(1.0, 0.0, 0.0, 0.0), brush_strength * t * delta);
+	}
+	else if (selected_tool == Tool::Splatmap_Texture2)
+	{
+		// Paint texture 2
+		pixel = color_move_towards(pixel, godot::Color(0.0, 1.0, 0.0, 0.0), brush_strength * t * delta);
+	}
+	else if (selected_tool == Tool::Splatmap_Texture3)
+	{
+		// Paint texture 3
+		pixel = color_move_towards(pixel, godot::Color(0.0, 0.0, 1.0, 0.0), brush_strength * t * delta);
+	}
+	else if (selected_tool == Tool::Splatmap_Texture4)
+	{
+		// Paint texture 4
+		pixel = color_move_towards(pixel, godot::Color(0.0, 0.0, 0.0, 1.0), brush_strength * t * delta);
 	}
 	return pixel;
 }

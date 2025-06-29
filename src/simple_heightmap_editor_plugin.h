@@ -37,8 +37,44 @@ private:
 		None,
 		Heightmap_Raise,
 		Heightmap_Smooth,
-		Heightmap_Flatten
+		Heightmap_Flatten,
+		Splatmap_Texture1,
+		Splatmap_Texture2,
+		Splatmap_Texture3,
+		Splatmap_Texture4
 	};
+
+	static bool is_heightmap_tool(Tool tool)
+	{
+		switch (tool)
+		{
+			case Tool::Heightmap_Raise:
+			case Tool::Heightmap_Smooth:
+			case Tool::Heightmap_Flatten:
+			return true;
+		}
+		return false;
+	}
+
+	static bool is_splatmap_tool(Tool tool)
+	{
+		switch (tool)
+		{
+			case Tool::Splatmap_Texture1:
+			case Tool::Splatmap_Texture2:
+			case Tool::Splatmap_Texture3:
+			case Tool::Splatmap_Texture4:
+			return true;
+		}
+		return false;
+	}
+
+	static godot::Ref<godot::Image> get_affected_image(Tool tool, SimpleHeightmap& heightmap)
+	{
+		if (is_heightmap_tool(tool)) return heightmap.get_heightmap_image();
+		if (is_splatmap_tool(tool)) return heightmap.get_splatmap_image();
+		return godot::Ref<godot::Image>();
+	}
 
 	void create_ui();
 	void destroy_ui();
@@ -63,6 +99,10 @@ private:
 	godot::Button* button_raise = nullptr;
 	godot::Button* button_smooth = nullptr;
 	godot::Button* button_flatten = nullptr;
+	godot::Button* button_texture_1 = nullptr;
+	godot::Button* button_texture_2 = nullptr;
+	godot::Button* button_texture_3 = nullptr;
+	godot::Button* button_texture_4 = nullptr;
 
 	godot::MultiMeshInstance3D* gizmo = nullptr;
 	godot::Ref<godot::MultiMesh> gizmo_multimesh = nullptr;
