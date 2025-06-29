@@ -71,6 +71,8 @@ private:
 	double brush_strength;
 	double brush_ease;
 
+	godot::real_t flatten_target;
+
 	bool mouse_over = false;
 	bool mouse_pressed = false;
 	bool alt_pressed = false;

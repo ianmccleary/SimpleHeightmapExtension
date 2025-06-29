@@ -246,6 +246,7 @@ int32_t SimpleHeightmapEditorPlugin::_forward_3d_gui_input(godot::Camera3D* p_vi
 			{
 				if (mouse_button_event->is_pressed() && !mouse_pressed && mouse_over)
 				{
+					flatten_target = mouse_global_position.y;
 					mouse_pressed = true;
 					return AFTER_GUI_INPUT_STOP;
 				}
@@ -375,7 +376,7 @@ godot::Color SimpleHeightmapEditorPlugin::modify_pixel(const godot::Ref<godot::I
 	else if (selected_tool == Tool::Heightmap_Flatten)
 	{
 		// Flatten
-		pixel = color_move_towards(pixel, godot::Color(10.0, 0.0, 0.0, 0.0), brush_strength * t * delta);
+		pixel = color_move_towards(pixel, godot::Color(flatten_target, 0.0, 0.0, 0.0), brush_strength * t * delta);
 	}
 	return pixel;
 }
