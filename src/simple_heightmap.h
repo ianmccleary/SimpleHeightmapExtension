@@ -1,10 +1,11 @@
 #pragma once
 
 #include <godot_cpp/classes/collision_shape3d.hpp>
+#include <godot_cpp/classes/geometry_instance3d.hpp>
 #include <godot_cpp/classes/height_map_shape3d.hpp>
 #include <godot_cpp/classes/image.hpp>
-#include <godot_cpp/classes/geometry_instance3d.hpp>
 #include <godot_cpp/classes/static_body3d.hpp>
+#include <godot_cpp/classes/texture2d.hpp>
 
 class SimpleHeightmap : public godot::GeometryInstance3D
 {
@@ -27,13 +28,23 @@ public:
 
 	void set_image_size(int value);
 
+	void set_texture_1(const godot::Ref<godot::Texture2D>& new_texture) { texture_1 = new_texture; }
+	void set_texture_2(const godot::Ref<godot::Texture2D>& new_texture) { texture_2 = new_texture; }
+	void set_texture_3(const godot::Ref<godot::Texture2D>& new_texture) { texture_3 = new_texture; }
+	void set_texture_4(const godot::Ref<godot::Texture2D>& new_texture) { texture_4 = new_texture; }
+
 	[[nodiscard]] godot::real_t get_mesh_size() const { return mesh_size; }
 	[[nodiscard]] godot::real_t get_mesh_resolution() const { return mesh_resolution; }
 
 	[[nodiscard]] int get_image_size() const { return image_size; }
+	
+	[[nodiscard]] godot::Ref<godot::Image> get_heightmap_image() const { return heightmap; }
+	[[nodiscard]] godot::Ref<godot::Image> get_splatmap_image() const { return splatmap; }
 
-	godot::Ref<godot::Image> get_heightmap_image() const { return heightmap; }
-	godot::Ref<godot::Image> get_splatmap_image() const { return splatmap; }
+	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_1() const { return texture_1; }
+	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_2() const { return texture_2; }
+	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_3() const { return texture_3; }
+	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_4() const { return texture_4; }
 	
 	godot::Vector2 local_position_to_image_position(const godot::Vector3& local_position) const;
 	godot::Vector2 global_position_to_image_position(const godot::Vector3& global_position) const;
@@ -53,6 +64,11 @@ private:
 	int image_size = 16; // Size of the heightmap image (e.g., 64x64)
 	godot::Ref<godot::Image> heightmap;
 	godot::Ref<godot::Image> splatmap;
+
+	godot::Ref<godot::Texture2D> texture_1;
+	godot::Ref<godot::Texture2D> texture_2;
+	godot::Ref<godot::Texture2D> texture_3;
+	godot::Ref<godot::Texture2D> texture_4;
 
 	godot::RID mesh_id;
 	godot::PackedVector3Array vertex_positions;

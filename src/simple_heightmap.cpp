@@ -10,14 +10,26 @@ void SimpleHeightmap::_bind_methods()
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_resolution"), &SimpleHeightmap::get_mesh_resolution);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_image_size"), &SimpleHeightmap::get_image_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_1"), &SimpleHeightmap::get_texture_1);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_2"), &SimpleHeightmap::get_texture_2);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_3"), &SimpleHeightmap::get_texture_3);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_4"), &SimpleHeightmap::get_texture_4);
 
 	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_size", "value"), &SimpleHeightmap::set_mesh_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_resolution", "value"), &SimpleHeightmap::set_mesh_resolution);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_image_size", "value"), &SimpleHeightmap::set_image_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_1", "new_texture"), &SimpleHeightmap::set_texture_1);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_2", "new_texture"), &SimpleHeightmap::set_texture_2);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_3", "new_texture"), &SimpleHeightmap::set_texture_3);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_4", "new_texture"), &SimpleHeightmap::set_texture_4);
 
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_size"), "set_mesh_size", "get_mesh_size");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::INT, "image_size"), "set_image_size", "get_image_size");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_1", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_1", "get_texture_1");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_2", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_2", "get_texture_2");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_3", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_3", "get_texture_3");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_4", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_4", "get_texture_4");
 }
 
 void SimpleHeightmap::_enter_tree()
