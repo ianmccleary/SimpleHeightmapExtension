@@ -17,19 +17,17 @@ protected:
 public:
 	SimpleHeightmap() = default;
 	~SimpleHeightmap() = default;
-
-	void _enter_tree() override;
-	void _exit_tree() override;
+	
+	void _notification(int32_t what);
 
 	void rebuild();
 
 	void set_mesh_size(const godot::real_t value);
 	void set_mesh_resolution(const godot::real_t value);
-
 	void set_image_size(int value);
-
 	void set_texture_size(const godot::real_t value);
-
+	void set_heightmap_image(const godot::Ref<godot::Image>& new_heightmap);
+	void set_splatmap_image(const godot::Ref<godot::Image>& new_splatmap);
 	void set_texture_1(const godot::Ref<godot::Texture2D>& new_texture) { texture_1 = new_texture; }
 	void set_texture_2(const godot::Ref<godot::Texture2D>& new_texture) { texture_2 = new_texture; }
 	void set_texture_3(const godot::Ref<godot::Texture2D>& new_texture) { texture_3 = new_texture; }
@@ -37,14 +35,10 @@ public:
 
 	[[nodiscard]] godot::real_t get_mesh_size() const { return mesh_size; }
 	[[nodiscard]] godot::real_t get_mesh_resolution() const { return mesh_resolution; }
-
 	[[nodiscard]] int get_image_size() const { return image_size; }
-
 	[[nodiscard]] godot::real_t get_texture_size() const { return texture_size; }
-	
-	[[nodiscard]] const godot::Ref<godot::Image>& get_heightmap_image() const { return heightmap; }
-	[[nodiscard]] const godot::Ref<godot::Image>& get_splatmap_image() const { return splatmap; }
-
+	[[nodiscard]] godot::Ref<godot::Image> get_heightmap_image() const { return heightmap; }
+	[[nodiscard]] godot::Ref<godot::Image> get_splatmap_image() const { return splatmap; }
 	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_1() const { return texture_1; }
 	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_2() const { return texture_2; }
 	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_3() const { return texture_3; }
@@ -57,9 +51,7 @@ public:
 	godot::Vector3 image_position_to_global_position(const godot::Vector2& image_position) const;
 
 private:
-	void generate_default_heightmap_data();
-	void generate_default_splatmap_data();
-
+	static void initialize_image(const godot::Ref<godot::Image>& image, godot::Image::Format format, int32_t size, godot::Color default_color = godot::Color());
 	static godot::Color bilinear_sample(const godot::Ref<godot::Image>& image, const godot::Vector2& point);
 
 	godot::real_t mesh_size = 4.0; // Mesh size

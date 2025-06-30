@@ -7,10 +7,17 @@
 
 void SimpleHeightmap::_bind_methods()
 {
+	const auto image_usage_flags =
+		godot::PROPERTY_USAGE_DEFAULT |
+		godot::PROPERTY_USAGE_READ_ONLY |
+		godot::PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT;
+
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_resolution"), &SimpleHeightmap::get_mesh_resolution);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_image_size"), &SimpleHeightmap::get_image_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_size"), &SimpleHeightmap::get_texture_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_heightmap_image"), &SimpleHeightmap::get_heightmap_image);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_splatmap_image"), &SimpleHeightmap::get_splatmap_image);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_1"), &SimpleHeightmap::get_texture_1);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_2"), &SimpleHeightmap::get_texture_2);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_3"), &SimpleHeightmap::get_texture_3);
@@ -20,6 +27,8 @@ void SimpleHeightmap::_bind_methods()
 	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_resolution", "value"), &SimpleHeightmap::set_mesh_resolution);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_image_size", "value"), &SimpleHeightmap::set_image_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_size", "value"), &SimpleHeightmap::set_texture_size);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_heightmap_image"), &SimpleHeightmap::set_heightmap_image);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_splatmap_image"), &SimpleHeightmap::set_splatmap_image);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_1", "new_texture"), &SimpleHeightmap::set_texture_1);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_2", "new_texture"), &SimpleHeightmap::set_texture_2);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_3", "new_texture"), &SimpleHeightmap::set_texture_3);
@@ -29,40 +38,40 @@ void SimpleHeightmap::_bind_methods()
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::INT, "image_size"), "set_image_size", "get_image_size");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "texture_size"), "set_texture_size", "get_texture_size");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "heightmap_image", godot::PROPERTY_HINT_RESOURCE_TYPE, "Image", image_usage_flags), "set_heightmap_image", "get_heightmap_image");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "splatmap_image", godot::PROPERTY_HINT_RESOURCE_TYPE, "Image", image_usage_flags), "set_splatmap_image", "get_splatmap_image");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_1", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_1", "get_texture_1");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_2", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_2", "get_texture_2");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_3", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_3", "get_texture_3");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_4", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_4", "get_texture_4");
 }
 
-void SimpleHeightmap::_enter_tree()
+void SimpleHeightmap::_notification(int what)
 {
-	// TODO: Save and reload data
-	generate_default_heightmap_data();
-	generate_default_splatmap_data();
-
-	const auto rserver = godot::RenderingServer::get_singleton();
-	if (rserver != nullptr)
+	if (what == NOTIFICATION_READY)
 	{
-		mesh_id = rserver->mesh_create();
-		set_base(mesh_id);
-		rebuild();
+		const auto rserver = godot::RenderingServer::get_singleton();
+		if (rserver != nullptr)
+		{
+			mesh_id = rserver->mesh_create();
+			set_base(mesh_id);
+			rebuild();
+		}
 	}
-}
-
-void SimpleHeightmap::_exit_tree()
-{
-	const auto rserver = godot::RenderingServer::get_singleton();
-	if (rserver != nullptr)
+	else if (what == NOTIFICATION_PREDELETE)
 	{
-		rserver->free_rid(mesh_id);
+		const auto rserver = godot::RenderingServer::get_singleton();
+		if (rserver != nullptr)
+		{
+			rserver->free_rid(mesh_id);
+		}
 	}
 }
 
 void SimpleHeightmap::rebuild()
 {
 	const auto rserver = godot::RenderingServer::get_singleton();
-	if (is_inside_tree() && rserver != nullptr && mesh_id.is_valid() && image_size > 0 && mesh_resolution > 0.0)
+	if (is_inside_tree() && rserver != nullptr && mesh_id.is_valid() && image_size > 0 && mesh_resolution > 0.0 && heightmap.is_valid() && splatmap.is_valid())
 	{
 		rserver->mesh_clear(mesh_id);
 
@@ -242,26 +251,40 @@ void SimpleHeightmap::set_texture_size(const godot::real_t value)
 	rebuild();
 }
 
-void SimpleHeightmap::generate_default_heightmap_data()
+void SimpleHeightmap::set_heightmap_image(const godot::Ref<godot::Image>& new_heightmap)
 {
-	heightmap = godot::Image::create(image_size, image_size, false, godot::Image::FORMAT_RF);
-	heightmap->resize(image_size, image_size);
-	for (int x = 0; x < image_size; ++x)
-	{
-		for (int y = 0; y < image_size; ++y)
-		{
-			const auto value = (godot::real_t)(
-				godot::Math::sin(static_cast<godot::real_t>(x) / static_cast<godot::real_t>(image_size) * Math_TAU) *
-				godot::Math::cos(static_cast<godot::real_t>(y) / static_cast<godot::real_t>(image_size) * Math_TAU));
-			heightmap->set_pixel(x, y, godot::Color(value, 0.0, 0.0, 0.0));
-		}
-	}
+	heightmap = new_heightmap;
+	initialize_image(heightmap, godot::Image::FORMAT_RF, image_size);
+	rebuild();
 }
 
-void SimpleHeightmap::generate_default_splatmap_data()
+void SimpleHeightmap::set_splatmap_image(const godot::Ref<godot::Image>& new_splatmap)
 {
-	splatmap = godot::Image::create(image_size, image_size, false, godot::Image::FORMAT_RGBA8);
-	splatmap->fill(godot::Color(0.5f, 0.f, 0.5f, 0.f));
+	splatmap = new_splatmap;
+	initialize_image(splatmap, godot::Image::FORMAT_RGBA8, image_size, godot::Color(1.0, 0.0, 0.0, 0.0));
+	rebuild();
+}
+
+void SimpleHeightmap::initialize_image(const godot::Ref<godot::Image>& image, godot::Image::Format format, int32_t size, godot::Color default_color)
+{
+	if (image.is_valid())
+	{
+		if (image->get_data().is_empty())
+		{
+			godot::PackedByteArray new_data;
+			new_data.resize(size * size * 4);
+			image->set_data(size, size, false, format, new_data);
+			image->fill(default_color);
+		}
+		if (image->get_format() != format)
+		{
+			image->convert(format);
+		}
+		if (image->get_width() != size || image->get_height() != size)
+		{
+			image->resize(size, size);
+		}
+	}
 }
 
 namespace
