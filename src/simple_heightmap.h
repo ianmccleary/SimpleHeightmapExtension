@@ -20,7 +20,16 @@ public:
 	
 	void _notification(int32_t what);
 
-	void rebuild();
+	enum ChangeType : uint8_t
+	{
+		NONE = 0x0,
+		HEIGHTMAP = 0x1,
+		SPLATMAP = 0x2,
+		UV = 0x4,
+		ALL = HEIGHTMAP | SPLATMAP | UV
+	};
+
+	void rebuild(ChangeType change_type);
 
 	void set_mesh_size(const godot::real_t value);
 	void set_mesh_resolution(const godot::real_t value);
@@ -54,6 +63,15 @@ private:
 	static void initialize_image(const godot::Ref<godot::Image>& image, godot::Image::Format format, int32_t size, godot::Color default_color = godot::Color());
 	static godot::Color bilinear_sample(const godot::Ref<godot::Image>& image, const godot::Vector2& point);
 
+	int32_t get_quads_per_side() const { return static_cast<int32_t>(godot::Math::round(image_size * mesh_resolution)); }
+	int32_t get_vertices_per_side() const { return get_quads_per_side() + 1; }
+	int32_t get_vertex_count() const { const auto n = get_vertices_per_side(); return n * n; }
+	int32_t get_index_count() const { const auto n = get_quads_per_side(); return n * n * 6; }
+	godot::real_t get_quad_size() const { return mesh_size / static_cast<godot::real_t>(get_quads_per_side()); }
+
+	void rebuild_mesh(ChangeType change_type);
+	void rebuild_collider_mesh();
+
 	godot::real_t mesh_size = 4.0; // Mesh size
 	godot::real_t mesh_resolution = 1.0; // Mesh density
 	
@@ -74,6 +92,14 @@ private:
 	godot::PackedVector3Array vertex_normals;
 	godot::PackedColorArray vertex_colors;
 	godot::PackedInt32Array indices;
+	godot::PackedFloat32Array collision_data;
+
+	godot::Vector<uint32_t> surface_offsets;
+	godot::PackedByteArray surface_vertex_buffer;
+	godot::PackedByteArray surface_attribute_buffer;
+	uint32_t surface_vertex_stride;
+	uint32_t surface_normal_tangent_stride;
+	uint32_t surface_attribute_stride;
 
 	godot::StaticBody3D* collision_body = nullptr;
 	godot::CollisionShape3D* collision_shape_node = nullptr;

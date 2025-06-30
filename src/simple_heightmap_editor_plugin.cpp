@@ -347,7 +347,8 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 					image->set_pixel(x + min.x, y + min.y, buffer[x + y * size.x]);
 				}
 			}
-			selected_heightmap->rebuild();
+			auto change_type = is_heightmap_tool(selected_tool) ? SimpleHeightmap::HEIGHTMAP : SimpleHeightmap::SPLATMAP;
+			selected_heightmap->rebuild(change_type);
 		}
 
 		gizmo_multimesh->set_visible_instance_count(godot::Math::min(gizmo_count, gizmo_multimesh->get_instance_count()));
