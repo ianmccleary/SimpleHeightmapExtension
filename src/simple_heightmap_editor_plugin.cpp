@@ -218,22 +218,27 @@ namespace
 	{
 		out_collision = godot::Vector3();
 
-		const auto world = camera.get_world_3d();
-		const auto space_state = world.is_valid() ? world->get_direct_space_state() : nullptr;
-		if (space_state != nullptr)
+		const auto pserver = godot::PhysicsServer3D::get_singleton();
+		if (pserver)
 		{
-			const auto a = camera.project_ray_origin(mouse_position);
-			const auto b = a + camera.project_ray_normal(mouse_position) * 1000.0;
-			const auto raycast_result = space_state->intersect_ray(godot::PhysicsRayQueryParameters3D::create(a, b));
-
-			const auto collider = godot::Object::cast_to<godot::CollisionObject3D>(raycast_result["collider"]);
-			if (collider != nullptr && collider->get_parent())
+			const auto world = camera.get_world_3d();
+			const auto space_state = world.is_valid() ? world->get_direct_space_state() : nullptr;
+			if (space_state != nullptr)
 			{
-				const auto picked_heightmap = godot::Object::cast_to<SimpleHeightmap>(collider->get_parent());
-				if (picked_heightmap != nullptr && picked_heightmap == expected_heightmap)
+				const auto a = camera.project_ray_origin(mouse_position);
+				const auto b = a + camera.project_ray_normal(mouse_position) * 1000.0;
+				const auto raycast_result = space_state->intersect_ray(godot::PhysicsRayQueryParameters3D::create(a, b));
+				
+				const auto rid = static_cast<godot::RID>(raycast_result["rid"]);
+				if (rid.is_valid())
 				{
-					out_collision = static_cast<godot::Vector3>(raycast_result["position"]);
-					return true;
+					const auto object_id = pserver->body_get_object_instance_id(rid);
+					const auto picked_heightmap = godot::Object::cast_to<SimpleHeightmap>(godot::ObjectDB::get_instance(object_id));
+					if (picked_heightmap != nullptr && picked_heightmap == expected_heightmap)
+					{
+						out_collision = static_cast<godot::Vector3>(raycast_result["position"]);
+						return true;
+					}
 				}
 			}
 		}

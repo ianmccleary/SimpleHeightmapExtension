@@ -16,8 +16,8 @@ protected:
 	static void _bind_methods();
 
 public:
-	SimpleHeightmap() = default;
-	~SimpleHeightmap() = default;
+	SimpleHeightmap();
+	~SimpleHeightmap();
 	
 	void _notification(int32_t what);
 
@@ -95,8 +95,9 @@ private:
 	uint32_t surface_normal_tangent_stride;
 	uint32_t surface_attribute_stride;
 
-	godot::StaticBody3D* collision_body = nullptr;
-	godot::CollisionShape3D* collision_shape_node = nullptr;
-	godot::Ref<godot::HeightMapShape3D> collision_shape = nullptr;
-	godot::PackedFloat32Array collision_buffer;
+	godot::RID collider_body_id;
+	godot::RID collider_shape_id;
+	godot::PackedRealArray collider_shape_data;
+	godot::real_t collider_shape_min_height;
+	godot::real_t collider_shape_max_height;
 };

@@ -1,8 +1,10 @@
 #include "simple_heightmap.h"
 #include <godot_cpp/classes/convex_polygon_shape3d.hpp>
+#include <godot_cpp/classes/physics_server3d.hpp>
 #include <godot_cpp/classes/random_number_generator.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/triangle_mesh.hpp>
+#include <godot_cpp/classes/world3d.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/math.hpp>
 
@@ -47,30 +49,91 @@ void SimpleHeightmap::_bind_methods()
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_4", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_4", "get_texture_4");
 }
 
+SimpleHeightmap::SimpleHeightmap()
+{
+	const auto rserver = godot::RenderingServer::get_singleton();
+	if (rserver != nullptr)
+	{
+		mesh_id = rserver->mesh_create();
+		set_base(mesh_id);
+	}
+	const auto pserver = godot::PhysicsServer3D::get_singleton();
+	if (pserver)
+	{
+		auto id = get_instance_id();
+
+		collider_body_id = pserver->body_create();
+		pserver->body_set_mode(collider_body_id, godot::PhysicsServer3D::BODY_MODE_STATIC);
+		pserver->body_set_ray_pickable(collider_body_id, true);
+		pserver->body_attach_object_instance_id(collider_body_id, get_instance_id());
+
+		collider_shape_id = pserver->heightmap_shape_create();
+		pserver->body_add_shape(collider_body_id, collider_shape_id);
+
+		auto col_layer = pserver->body_get_collision_layer(collider_body_id);
+		auto col_mask = pserver->body_get_collision_mask(collider_body_id);
+		auto col_x = pserver->body_get_collision_priority(collider_body_id);
+		printf("what");
+	}
+}
+
 void SimpleHeightmap::_notification(int what)
 {
-	if (what == NOTIFICATION_READY)
+	switch (what)
 	{
-		// Create collision nodes
-		collision_body = memnew(godot::StaticBody3D);
-		add_child(collision_body);
-		collision_body->set_owner(this);
-
-		collision_shape_node = memnew(godot::CollisionShape3D);
-		collision_body->add_child(collision_shape_node);
-		collision_shape_node->set_owner(this);
-
-		collision_shape.instantiate();
-		collision_shape_node->set_shape(collision_shape);
-
-		// Create the mesh
-		const auto rserver = godot::RenderingServer::get_singleton();
-		if (rserver != nullptr)
+		case NOTIFICATION_READY:
 		{
-			mesh_id = rserver->mesh_create();
-			set_base(mesh_id);
 			rebuild(ALL);
 		}
+		break;
+
+		case NOTIFICATION_ENTER_WORLD: // Physics World
+		{
+			const auto pserver = godot::PhysicsServer3D::get_singleton();
+			if (pserver && collider_body_id.is_valid())
+			{
+				const auto world = get_world_3d();
+				const auto space = world->get_space();
+				pserver->body_set_space(collider_body_id, space);
+				pserver->body_set_state(collider_body_id, godot::PhysicsServer3D::BODY_STATE_TRANSFORM, get_global_transform());
+			}
+		}
+		break;
+
+		case NOTIFICATION_TRANSFORM_CHANGED:
+		{
+			const auto pserver = godot::PhysicsServer3D::get_singleton();
+			if (pserver && collider_body_id.is_valid())
+			{
+				pserver->body_set_state(collider_body_id, godot::PhysicsServer3D::BODY_STATE_TRANSFORM, get_global_transform());
+			}
+		}
+		break;
+
+		case NOTIFICATION_EXIT_WORLD: // Physics World
+		{
+			const auto pserver = godot::PhysicsServer3D::get_singleton();
+			if (pserver && collider_body_id.is_valid())
+			{
+				pserver->body_set_space(collider_body_id, godot::RID());
+			}
+		}
+		break;
+	}
+}
+
+SimpleHeightmap::~SimpleHeightmap()
+{
+	const auto pserver = godot::PhysicsServer3D::get_singleton();
+	if (pserver)
+	{
+		pserver->free_rid(collider_shape_id);
+		pserver->free_rid(collider_body_id);
+	}
+	const auto rserver = godot::RenderingServer::get_singleton();
+	if (rserver != nullptr)
+	{
+		rserver->free_rid(mesh_id);
 	}
 }
 
@@ -121,6 +184,7 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 	constexpr auto ATTRIB_ELEMENT_SIZE = ELEMENT_SIZE_UV + ELEMENT_SIZE_COLOR;
 
 	const auto rserver = godot::RenderingServer::get_singleton();
+	const auto pserver = godot::PhysicsServer3D::get_singleton();
 	if (rserver != nullptr && is_inside_tree() && mesh_id.is_valid() && heightmap.is_valid() && splatmap.is_valid() && mesh_size > CMP_EPSILON)
 	{
 		const auto vertex_count = get_vertex_count();
@@ -206,8 +270,20 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 			surface_vertex_stride = rserver->mesh_surface_get_format_vertex_stride(format, vertex_count);
 			surface_normal_tangent_stride = rserver->mesh_surface_get_format_normal_tangent_stride(format, vertex_count);
 			surface_attribute_stride = rserver->mesh_surface_get_format_attribute_stride(format, vertex_count);
-			
-			collision_buffer.resize(vertex_count);
+
+			// Update transform/scale of collider shape
+			if (pserver != nullptr)
+			{
+				constexpr godot::real_t COLLIDER_QUAD_SIZE = 1.0;
+				const auto collider_size = COLLIDER_QUAD_SIZE * get_quads_per_side();
+				const auto scale = mesh_size / collider_size;
+				auto collider_shape_transform = godot::Transform3D(
+					godot::Basis::from_scale(godot::Vector3(scale, 1.0, scale)),
+					godot::Vector3(mesh_size * (godot::real_t)0.5, 0.0, mesh_size * (godot::real_t)0.5));
+				pserver->body_set_shape_transform(collider_body_id, 0, collider_shape_transform);
+
+				collider_shape_data.resize(vertex_count);
+			}
 		}
 
 		const auto vertices_per_side = get_vertices_per_side();
@@ -215,6 +291,9 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 
 		auto surface_vertex_buffer_p = surface_vertex_buffer.ptrw();
 		auto surface_attribute_buffer_p = surface_attribute_buffer.ptrw();
+
+		collider_shape_min_height = std::numeric_limits<godot::real_t>::max();
+		collider_shape_max_height = std::numeric_limits<godot::real_t>::min();
 
 		// The first point will always be at 0,0,0
 		auto aabb = godot::AABB(godot::Vector3(), godot::Vector3());
@@ -233,7 +312,12 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 					memcpy(&surface_vertex_buffer_p[i * surface_vertex_stride + surface_offsets[godot::Mesh::ARRAY_VERTEX]], &position, ELEMENT_SIZE_POSITION);
 					memcpy(&surface_vertex_buffer_p[i * surface_normal_tangent_stride + surface_offsets[godot::Mesh::ARRAY_NORMAL]], &normal, ELEMENT_SIZE_NORMAL_TANGENT);
 					aabb.expand_to(position);
-					collision_buffer.set(i, position.y);
+					if (pserver != nullptr)
+					{
+						collider_shape_data.set(i, position.y);
+						collider_shape_min_height = godot::Math::min(position.y, collider_shape_min_height);
+						collider_shape_max_height = godot::Math::max(position.y, collider_shape_max_height);
+					}
 				}
 				if (change_type & UV)
 				{
@@ -253,19 +337,16 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 			rserver->mesh_surface_update_vertex_region(mesh_id, 0, 0, surface_vertex_buffer);
 			rserver->mesh_set_custom_aabb(mesh_id, aabb);
 
-			collision_shape->set_map_width(vertices_per_side);
-			collision_shape->set_map_depth(vertices_per_side);
-			collision_shape->set_map_data(collision_buffer);
-
-			// The heightmap collision shape is always centered and its quads are always a specific size
-			// Move it to the center to align with this heightmap mesh
-			collision_shape_node->set_position(godot::Vector3(mesh_size * (godot::real_t)0.5, 0.0, mesh_size * (godot::real_t)0.5));
-
-			// Rescale it so it matches the size of the heightmap mesh
-			constexpr godot::real_t COLLIDER_QUAD_SIZE = 1.0;
-			const auto collider_size = COLLIDER_QUAD_SIZE * get_quads_per_side();
-			const auto scale = mesh_size / collider_size;
-			collision_shape_node->set_scale(godot::Vector3(scale, 1.0, scale));
+			if (pserver != nullptr)
+			{
+				godot::Dictionary collider_dict;
+				collider_dict["width"] = vertices_per_side;
+				collider_dict["depth"] = vertices_per_side;
+				collider_dict["heights"] = collider_shape_data;
+				collider_dict["min_height"] = collider_shape_min_height;
+				collider_dict["max_height"] = collider_shape_max_height;
+				pserver->shape_set_data(collider_shape_id, collider_dict);
+			}
 		}
 		if ((change_type & UV) || (change_type & SPLATMAP))
 		{
