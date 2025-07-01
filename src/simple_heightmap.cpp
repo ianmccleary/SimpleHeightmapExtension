@@ -69,11 +69,6 @@ SimpleHeightmap::SimpleHeightmap()
 
 		collider_shape_id = pserver->heightmap_shape_create();
 		pserver->body_add_shape(collider_body_id, collider_shape_id);
-
-		auto col_layer = pserver->body_get_collision_layer(collider_body_id);
-		auto col_mask = pserver->body_get_collision_mask(collider_body_id);
-		auto col_x = pserver->body_get_collision_priority(collider_body_id);
-		printf("what");
 	}
 }
 
