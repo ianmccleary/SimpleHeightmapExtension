@@ -266,17 +266,8 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 			surface_normal_tangent_stride = rserver->mesh_surface_get_format_normal_tangent_stride(format, vertex_count);
 			surface_attribute_stride = rserver->mesh_surface_get_format_attribute_stride(format, vertex_count);
 
-			// Update transform/scale of collider shape
 			if (pserver != nullptr)
 			{
-				constexpr godot::real_t COLLIDER_QUAD_SIZE = 1.0;
-				const auto collider_size = COLLIDER_QUAD_SIZE * get_quads_per_side();
-				const auto scale = mesh_size / collider_size;
-				auto collider_shape_transform = godot::Transform3D(
-					godot::Basis::from_scale(godot::Vector3(scale, 1.0, scale)),
-					godot::Vector3(mesh_size * (godot::real_t)0.5, 0.0, mesh_size * (godot::real_t)0.5));
-				pserver->body_set_shape_transform(collider_body_id, 0, collider_shape_transform);
-
 				collider_shape_data.resize(vertex_count);
 			}
 		}
@@ -341,6 +332,15 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 				collider_dict["min_height"] = collider_shape_min_height;
 				collider_dict["max_height"] = collider_shape_max_height;
 				pserver->shape_set_data(collider_shape_id, collider_dict);
+
+				// Update transform/scale of collider shape
+				constexpr godot::real_t COLLIDER_QUAD_SIZE = 1.0;
+				const auto collider_size = COLLIDER_QUAD_SIZE * get_quads_per_side();
+				const auto scale = mesh_size / collider_size;
+				auto collider_shape_transform = godot::Transform3D(
+					godot::Basis::from_scale(godot::Vector3(scale, 1.0, scale)),
+					godot::Vector3(get_half_mesh_size(), 0.0, get_half_mesh_size()));
+				pserver->body_set_shape_transform(collider_body_id, 0, collider_shape_transform);
 			}
 		}
 		if ((change_type & UV) || (change_type & SPLATMAP))
