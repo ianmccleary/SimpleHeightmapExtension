@@ -40,6 +40,9 @@ void SimpleHeightmapEditorPlugin::_enter_tree()
 	brush_strength = 1.0;
 	brush_ease = 1.0;
 
+	gizmo_plugin.instantiate();
+	add_node_3d_gizmo_plugin(gizmo_plugin);
+
 	create_ui();
 }
 
@@ -167,6 +170,9 @@ void SimpleHeightmapEditorPlugin::on_brush_ease_changed(double value)
 
 void SimpleHeightmapEditorPlugin::_exit_tree()
 {
+	remove_node_3d_gizmo_plugin(gizmo_plugin);
+	gizmo_plugin = godot::Ref<SimpleHeightmapGizmoPlugin>();
+
 	destroy_ui();
 
 	gizmo->queue_free();

@@ -2,7 +2,6 @@
 
 #ifdef TOOLS_ENABLED
 
-#include <memory.h>
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/control.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
@@ -10,7 +9,9 @@
 #include <godot_cpp/classes/multi_mesh.hpp>
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 #include <godot_cpp/classes/ref.hpp>
+
 #include "simple_heightmap.h"
+#include "simple_heightmap_gizmo_plugin.h"
 
 class SimpleHeightmapEditorPlugin : public godot::EditorPlugin
 {
@@ -91,6 +92,8 @@ private:
 
 	godot::Vector3 mouse_global_position;
 	godot::Vector2 mouse_image_position;
+
+	godot::Ref<SimpleHeightmapGizmoPlugin> gizmo_plugin;
 
 	SimpleHeightmap* selected_heightmap = nullptr;
 	Tool selected_tool = Tool::None;

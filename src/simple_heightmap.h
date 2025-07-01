@@ -44,6 +44,7 @@ public:
 	void set_texture_4(const godot::Ref<godot::Texture2D>& new_texture) { texture_4 = new_texture; }
 
 	[[nodiscard]] godot::real_t get_mesh_size() const { return mesh_size; }
+	[[nodiscard]] godot::real_t get_half_mesh_size() const { return mesh_size * static_cast<godot::real_t>(0.5); }
 	[[nodiscard]] godot::real_t get_mesh_resolution() const { return mesh_resolution; }
 	[[nodiscard]] int get_image_size() const { return image_size; }
 	[[nodiscard]] godot::real_t get_texture_size() const { return texture_size; }
@@ -59,6 +60,12 @@ public:
 
 	godot::Vector3 image_position_to_local_position(const godot::Vector2& image_position) const;
 	godot::Vector3 image_position_to_global_position(const godot::Vector2& image_position) const;
+
+#ifdef TOOLS_ENABLED
+	uint32_t get_collider_shape_data_size() const { return get_vertices_per_side(); }
+	const godot::PackedRealArray& get_collider_shape_data() const { return collider_shape_data; }
+	godot::real_t get_collider_size() const { return static_cast<godot::real_t>(get_quads_per_side()); } // Each quad is 1 unit wide/deep, total size is all quads
+#endif // TOOLS_ENABLED
 
 private:
 	static void initialize_image(const godot::Ref<godot::Image>& image, godot::Image::Format format, int32_t size, godot::Color default_color = godot::Color());
