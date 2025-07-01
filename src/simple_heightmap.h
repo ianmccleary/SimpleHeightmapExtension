@@ -4,6 +4,7 @@
 #include <godot_cpp/classes/geometry_instance3d.hpp>
 #include <godot_cpp/classes/height_map_shape3d.hpp>
 #include <godot_cpp/classes/image.hpp>
+#include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/static_body3d.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
 
@@ -63,14 +64,11 @@ private:
 	static void initialize_image(const godot::Ref<godot::Image>& image, godot::Image::Format format, int32_t size, godot::Color default_color = godot::Color());
 	static godot::Color bilinear_sample(const godot::Ref<godot::Image>& image, const godot::Vector2& point);
 
-	int32_t get_quads_per_side() const { return static_cast<int32_t>(godot::Math::round(image_size * mesh_resolution)); }
-	int32_t get_vertices_per_side() const { return get_quads_per_side() + 1; }
-	int32_t get_vertex_count() const { const auto n = get_vertices_per_side(); return n * n; }
-	int32_t get_index_count() const { const auto n = get_quads_per_side(); return n * n * 6; }
+	uint32_t get_quads_per_side() const { return static_cast<int32_t>(godot::Math::round(image_size * mesh_resolution)); }
+	uint32_t get_vertices_per_side() const { return get_quads_per_side() + 1; }
+	uint32_t get_vertex_count() const { const auto n = get_vertices_per_side(); return n * n; }
+	uint32_t get_index_count() const { const auto n = get_quads_per_side(); return n * n * 6; }
 	godot::real_t get_quad_size() const { return mesh_size / static_cast<godot::real_t>(get_quads_per_side()); }
-
-	void rebuild_mesh(ChangeType change_type);
-	void rebuild_collider_mesh();
 
 	godot::real_t mesh_size = 4.0; // Mesh size
 	godot::real_t mesh_resolution = 1.0; // Mesh density
@@ -87,12 +85,8 @@ private:
 	godot::Ref<godot::Texture2D> texture_4;
 
 	godot::RID mesh_id;
-	godot::PackedVector3Array vertex_positions;
-	godot::PackedVector2Array vertex_uvs;
-	godot::PackedVector3Array vertex_normals;
-	godot::PackedColorArray vertex_colors;
-	godot::PackedInt32Array indices;
-	godot::PackedFloat32Array collision_data;
+	uint32_t cached_vertex_count = 0;
+	uint32_t cached_index_count = 0;
 
 	godot::Vector<uint32_t> surface_offsets;
 	godot::PackedByteArray surface_vertex_buffer;
@@ -104,4 +98,5 @@ private:
 	godot::StaticBody3D* collision_body = nullptr;
 	godot::CollisionShape3D* collision_shape_node = nullptr;
 	godot::Ref<godot::HeightMapShape3D> collision_shape = nullptr;
+	godot::PackedFloat32Array collision_buffer;
 };

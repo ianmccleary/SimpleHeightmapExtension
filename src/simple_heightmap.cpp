@@ -1,7 +1,8 @@
 #include "simple_heightmap.h"
-#include <godot_cpp/classes/mesh.hpp>
+#include <godot_cpp/classes/convex_polygon_shape3d.hpp>
 #include <godot_cpp/classes/random_number_generator.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
+#include <godot_cpp/classes/triangle_mesh.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/math.hpp>
 
@@ -50,20 +51,25 @@ void SimpleHeightmap::_notification(int what)
 {
 	if (what == NOTIFICATION_READY)
 	{
+		// Create collision nodes
+		collision_body = memnew(godot::StaticBody3D);
+		add_child(collision_body);
+		collision_body->set_owner(this);
+
+		collision_shape_node = memnew(godot::CollisionShape3D);
+		collision_body->add_child(collision_shape_node);
+		collision_shape_node->set_owner(this);
+
+		collision_shape.instantiate();
+		collision_shape_node->set_shape(collision_shape);
+
+		// Create the mesh
 		const auto rserver = godot::RenderingServer::get_singleton();
 		if (rserver != nullptr)
 		{
 			mesh_id = rserver->mesh_create();
 			set_base(mesh_id);
 			rebuild(ALL);
-		}
-	}
-	else if (what == NOTIFICATION_PREDELETE)
-	{
-		const auto rserver = godot::RenderingServer::get_singleton();
-		if (rserver != nullptr)
-		{
-			rserver->free_rid(mesh_id);
 		}
 	}
 }
@@ -106,55 +112,85 @@ namespace
 
 void SimpleHeightmap::rebuild(ChangeType change_type)
 {
+	constexpr auto ELEMENT_SIZE_POSITION = sizeof(godot::Vector3);
+	constexpr auto ELEMENT_SIZE_NORMAL_TANGENT = sizeof(CompressedNormalTangent);
+	constexpr auto ELEMENT_SIZE_UV = sizeof(godot::Vector2);
+	constexpr auto ELEMENT_SIZE_COLOR = sizeof(int32_t);
+
+	constexpr auto VERTEX_ELEMENT_SIZE = ELEMENT_SIZE_POSITION + ELEMENT_SIZE_NORMAL_TANGENT;
+	constexpr auto ATTRIB_ELEMENT_SIZE = ELEMENT_SIZE_UV + ELEMENT_SIZE_COLOR;
+
 	const auto rserver = godot::RenderingServer::get_singleton();
 	if (rserver != nullptr && is_inside_tree() && mesh_id.is_valid() && heightmap.is_valid() && splatmap.is_valid() && mesh_size > CMP_EPSILON)
 	{
 		const auto vertex_count = get_vertex_count();
 		const auto index_count = get_index_count();
-		if (vertex_count != vertex_positions.size() || index_count != indices.size())
+		if (vertex_count != cached_vertex_count || index_count != cached_index_count)
 		{
-			vertex_positions.resize(vertex_count);
-			vertex_uvs.resize(vertex_count);
-			vertex_normals.resize(vertex_count);
-			vertex_colors.resize(vertex_count);
-			collision_data.resize(vertex_count);
-			indices.resize(index_count);
+			cached_vertex_count = vertex_count;
+			cached_index_count = index_count;
 			
-			// Update data
+			// Calculate indices
 			const auto quads_per_side = get_quads_per_side();
-			indices.resize(index_count);
-			int64_t ti = 0;
-			int64_t vi = 0;
-			for (int64_t z = 0; z < quads_per_side; ++z)
+			const auto index_element_size = vertex_count <= std::numeric_limits<uint16_t>::max() ? sizeof(uint16_t) : sizeof(uint32_t);
+			godot::PackedByteArray indices;
+			indices.resize(index_count * index_element_size);
+			const auto indices_p = indices.ptrw();
+			uint32_t ti = 0;
+			uint32_t vi = 0;
+			for (uint32_t z = 0; z < quads_per_side; ++z)
 			{
-				for (int64_t x = 0; x < quads_per_side; ++x)
+				for (uint32_t x = 0; x < quads_per_side; ++x)
 				{
-					indices[ti + 0] = vi + 1;
-					indices[ti + 1] = vi + quads_per_side + 1;
-					indices[ti + 2] = vi;
+					uint32_t i1 = vi + 1;
+					uint32_t i2 = vi + quads_per_side + 1;
+					uint32_t i3 = vi;
+					uint32_t i4 = vi + quads_per_side + 2;
 
-					indices[ti + 3] = vi + quads_per_side + 2;
-					indices[ti + 4] = vi + quads_per_side + 1;
-					indices[ti + 5] = vi + 1;
-
+					memcpy(&indices_p[ti * index_element_size + (index_element_size * 0)], &i1, index_element_size);
+					memcpy(&indices_p[ti * index_element_size + (index_element_size * 1)], &i2, index_element_size);
+					memcpy(&indices_p[ti * index_element_size + (index_element_size * 2)], &i3, index_element_size);
+					
+					memcpy(&indices_p[ti * index_element_size + (index_element_size * 3)], &i4, index_element_size);
+					memcpy(&indices_p[ti * index_element_size + (index_element_size * 4)], &i2, index_element_size);
+					memcpy(&indices_p[ti * index_element_size + (index_element_size * 5)], &i1, index_element_size);
 					ti += 6;
 					vi += 1;
 				}
 				vi += 1;
 			}
-			rebuild_mesh(change_type);
-			rebuild_collider_mesh();
+
+			// GDExtension provides only one interface for creating a surface
+			// It must be done through mesh_add_surface_from_arrays or mesh_add_surface
+			// Both of these require "raw" data - it is then converted to GL data
+			constexpr uint64_t surface_format =
+				godot::RenderingServer::ARRAY_FORMAT_VERTEX |
+				godot::RenderingServer::ARRAY_FORMAT_NORMAL |
+				godot::RenderingServer::ARRAY_FORMAT_TANGENT |
+				godot::RenderingServer::ARRAY_FORMAT_COLOR |
+				godot::RenderingServer::ARRAY_FORMAT_TEX_UV |
+				godot::RenderingServer::ARRAY_FORMAT_INDEX |
+				godot::RenderingServer::ARRAY_FLAG_FORMAT_CURRENT_VERSION;
+
+			godot::PackedByteArray temp_vertex_data;
+			temp_vertex_data.resize(VERTEX_ELEMENT_SIZE * vertex_count);
+
+			godot::PackedByteArray temp_attrib_data;
+			temp_attrib_data.resize(ATTRIB_ELEMENT_SIZE * vertex_count);
 			
-			// Submit to data rendering server
-			godot::Array arrays;
-			arrays.resize(godot::Mesh::ARRAY_MAX);
-			arrays[godot::Mesh::ARRAY_VERTEX] = vertex_positions;
-			arrays[godot::Mesh::ARRAY_TEX_UV] = vertex_uvs;
-			arrays[godot::Mesh::ARRAY_NORMAL] = vertex_normals;
-			arrays[godot::Mesh::ARRAY_COLOR] = vertex_colors;
-			arrays[godot::Mesh::ARRAY_INDEX] = indices;
+			// Required fields to create a surface
+			godot::Dictionary surface_dict;
+			surface_dict["primitive"] = godot::RenderingServer::PrimitiveType::PRIMITIVE_TRIANGLES;
+			surface_dict["format"] = surface_format;
+			surface_dict["vertex_data"] = temp_vertex_data;
+			surface_dict["vertex_count"] = vertex_count;
+			surface_dict["attribute_data"] = temp_attrib_data;
+			surface_dict["index_data"] = indices;
+			surface_dict["index_count"] = index_count;
+			surface_dict["aabb"] = godot::AABB();
+
 			rserver->mesh_clear(mesh_id);
-			rserver->mesh_add_surface_from_arrays(mesh_id, godot::RenderingServer::PrimitiveType::PRIMITIVE_TRIANGLES, arrays);
+			rserver->mesh_add_surface(mesh_id, surface_dict);
 
 			// Cache information to use when updating the mesh
 			const auto surface = rserver->mesh_get_surface(mesh_id, 0);
@@ -170,149 +206,72 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 			surface_vertex_stride = rserver->mesh_surface_get_format_vertex_stride(format, vertex_count);
 			surface_normal_tangent_stride = rserver->mesh_surface_get_format_normal_tangent_stride(format, vertex_count);
 			surface_attribute_stride = rserver->mesh_surface_get_format_attribute_stride(format, vertex_count);
+			
+			collision_buffer.resize(vertex_count);
 		}
-		else
-		{
-			// Update data
-			rebuild_mesh(change_type);
-			if (change_type & HEIGHTMAP)
-			{
-				rebuild_collider_mesh();
-			}
 
-			// Update surface data and submit to rendering server
-			auto surface_vertex_buffer_p = surface_vertex_buffer.ptrw();
-			auto surface_attribute_buffer_p = surface_attribute_buffer.ptrw();
-			for (int i = 0; i < vertex_count; ++i)
+		const auto vertices_per_side = get_vertices_per_side();
+		const auto quad_size = get_quad_size();
+
+		auto surface_vertex_buffer_p = surface_vertex_buffer.ptrw();
+		auto surface_attribute_buffer_p = surface_attribute_buffer.ptrw();
+
+		// The first point will always be at 0,0,0
+		auto aabb = godot::AABB(godot::Vector3(), godot::Vector3());
+
+		for (int64_t z = 0; z < vertices_per_side; ++z)
+		{
+			for (int64_t x = 0; x < vertices_per_side; ++x)
 			{
-				const auto vertex_position = vertex_positions[i];
-				const auto vertex_normal = compress_normal(vertex_normals[i]);
-				const auto color = vertex_colors[i].to_abgr32();
-				
+				const auto i = (x % vertices_per_side) + (z * vertices_per_side);
+				const auto px = x * quad_size;
+				const auto pz = z * quad_size;
 				if (change_type & HEIGHTMAP)
 				{
-					memcpy(&surface_vertex_buffer_p[i * surface_vertex_stride + surface_offsets[godot::Mesh::ARRAY_VERTEX]], &vertex_position, sizeof(godot::Vector3));
-					memcpy(&surface_vertex_buffer_p[i * surface_normal_tangent_stride + surface_offsets[godot::Mesh::ARRAY_NORMAL]], &vertex_normal, sizeof(CompressedNormalTangent));
+					auto position = godot::Vector3(px, bilinear_sample(heightmap, local_position_to_image_position(godot::Vector3(px, 0.0, pz))).r, pz);
+					auto normal = compress_normal(godot::Vector3(0.0, 1.0, 0.0));
+					memcpy(&surface_vertex_buffer_p[i * surface_vertex_stride + surface_offsets[godot::Mesh::ARRAY_VERTEX]], &position, ELEMENT_SIZE_POSITION);
+					memcpy(&surface_vertex_buffer_p[i * surface_normal_tangent_stride + surface_offsets[godot::Mesh::ARRAY_NORMAL]], &normal, ELEMENT_SIZE_NORMAL_TANGENT);
+					aabb.expand_to(position);
+					collision_buffer.set(i, position.y);
+				}
+				if (change_type & UV)
+				{
+					auto uv = godot::Vector2(px, pz) * texture_size;
+					memcpy(&surface_attribute_buffer_p[i * surface_attribute_stride + surface_offsets[godot::Mesh::ARRAY_TEX_UV]], &uv, ELEMENT_SIZE_UV);
 				}
 				if (change_type & SPLATMAP)
 				{
-					memcpy(&surface_attribute_buffer_p[i * surface_attribute_stride + surface_offsets[godot::Mesh::ARRAY_COLOR]], &color, sizeof(decltype(color)));
+					auto color = bilinear_sample(splatmap, local_position_to_image_position(godot::Vector3(px, 0.0, pz))).to_abgr32();
+					memcpy(&surface_attribute_buffer_p[i * surface_attribute_stride + surface_offsets[godot::Mesh::ARRAY_COLOR]], &color, ELEMENT_SIZE_COLOR);
 				}
 			}
-			if (change_type & HEIGHTMAP)
-			{
-				rserver->mesh_surface_update_vertex_region(mesh_id, 0, 0, surface_vertex_buffer);
-			}
-			if (change_type & SPLATMAP)
-			{
-				rserver->mesh_surface_update_attribute_region(mesh_id, 0, 0, surface_attribute_buffer);
-			}
 		}
-	}
-}
-
-void SimpleHeightmap::rebuild_mesh(ChangeType change_type)
-{
-	if (!(change_type & HEIGHTMAP) && !(change_type & SPLATMAP) && !(change_type & UV))
-	{
-		return;
-	}
-
-	// Calculate Position, UV
-	const auto vertices_per_side = get_vertices_per_side();
-	const auto quad_size = get_quad_size();
-	for (int64_t z = 0; z < vertices_per_side; ++z)
-	{
-		for (int64_t x = 0; x < vertices_per_side; ++x)
+		
+		if (change_type & HEIGHTMAP)
 		{
-			const auto i = (x % vertices_per_side) + (z * vertices_per_side);
-			const auto px = x * quad_size;
-			const auto pz = z * quad_size;
-			const auto p = godot::Vector3(px, 0.0, pz);
-			if (change_type & HEIGHTMAP)
-			{
-				const auto py = bilinear_sample(heightmap, local_position_to_image_position(p)).r;
-				vertex_positions[i] = godot::Vector3(px, py, pz);
-			}
-			if (change_type & UV)
-			{
-				vertex_uvs[i] = godot::Vector2(px, pz) * texture_size;
-			}
-			if (change_type & SPLATMAP)
-			{
-				vertex_colors[i] = bilinear_sample(splatmap, local_position_to_image_position(p));
-			}
-		}
-	}
+			rserver->mesh_surface_update_vertex_region(mesh_id, 0, 0, surface_vertex_buffer);
+			rserver->mesh_set_custom_aabb(mesh_id, aabb);
 
-	if (change_type & HEIGHTMAP)
-	{
-		vertex_normals.fill(godot::Vector3());
-		const auto quads_per_side = get_quads_per_side();
-		const auto vertex_count = get_vertex_count();
-		const auto index_count = get_index_count();
-		for (int64_t i = 0; i < index_count; i += 3)
+			collision_shape->set_map_width(vertices_per_side);
+			collision_shape->set_map_depth(vertices_per_side);
+			collision_shape->set_map_data(collision_buffer);
+
+			// The heightmap collision shape is always centered and its quads are always a specific size
+			// Move it to the center to align with this heightmap mesh
+			collision_shape_node->set_position(godot::Vector3(mesh_size * (godot::real_t)0.5, 0.0, mesh_size * (godot::real_t)0.5));
+
+			// Rescale it so it matches the size of the heightmap mesh
+			constexpr godot::real_t COLLIDER_QUAD_SIZE = 1.0;
+			const auto collider_size = COLLIDER_QUAD_SIZE * get_quads_per_side();
+			const auto scale = mesh_size / collider_size;
+			collision_shape_node->set_scale(godot::Vector3(scale, 1.0, scale));
+		}
+		if ((change_type & UV) || (change_type & SPLATMAP))
 		{
-			const auto i1 = indices[i + 0];
-			const auto i2 = indices[i + 1];
-			const auto i3 = indices[i + 2];
-			const auto p1 = vertex_positions[i1];
-			const auto p2 = vertex_positions[i2];
-			const auto p3 = vertex_positions[i3];
-			const auto v1 = p2 - p1;
-			const auto v2 = p3 - p1;
-			const auto n = v2.cross(v1).normalized();
-			vertex_normals[i1] += n;
-			vertex_normals[i2] += n;
-			vertex_normals[i3] += n;
+			rserver->mesh_surface_update_attribute_region(mesh_id, 0, 0, surface_attribute_buffer);
 		}
-		for (int64_t i = 0; i < vertex_count; ++i)
-			vertex_normals[i].normalize();
 	}
-}
-
-void SimpleHeightmap::rebuild_collider_mesh()
-{
-	for (int i = 0; i < vertex_positions.size(); ++i)
-	{
-		collision_data[i] = vertex_positions[i].y;
-	}
-
-	// Rebuild collision
-	if (collision_body == nullptr)
-	{
-		collision_body = memnew(godot::StaticBody3D);
-		add_child(collision_body);
-		collision_body->set_owner(this);
-	}
-	if (collision_shape_node == nullptr)
-	{
-		collision_shape_node = memnew(godot::CollisionShape3D);
-		collision_body->add_child(collision_shape_node);
-		collision_shape_node->set_owner(this);
-	}
-	if (collision_shape.is_null())
-	{
-		collision_shape.instantiate();
-		collision_shape_node->set_shape(collision_shape);
-	}
-
-	// Assign data to collision shape
-	const auto vertices_per_side = get_vertices_per_side();
-	collision_shape->set_map_width(vertices_per_side);
-	collision_shape->set_map_depth(vertices_per_side);
-	collision_shape->set_map_data(collision_data);
-
-	// The heightmap collision shape is always centered and its quads are always a specific size
-	// Move it to the center to align with this heightmap mesh
-	collision_shape_node->set_position(godot::Vector3(mesh_size * (godot::real_t)0.5, 0.0, mesh_size * (godot::real_t)0.5));
-
-	// Rescale it so it matches the size of the heightmap mesh
-	constexpr godot::real_t COLLISION_QUAD_SIZE = 1.0;
-	const auto quads_per_side = get_quads_per_side();
-	const auto actual_heightmap_collision_size = COLLISION_QUAD_SIZE * quads_per_side;
-	const auto scale = mesh_size / actual_heightmap_collision_size;
-	collision_shape_node->set_scale(godot::Vector3(scale, 1.0, scale));
 }
 
 godot::Vector2 SimpleHeightmap::local_position_to_image_position(const godot::Vector3& local_position) const
