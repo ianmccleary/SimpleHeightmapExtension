@@ -69,11 +69,11 @@ private:
 		return false;
 	}
 
-	static SimpleHeightmap::ChangeType get_change_type(Tool tool)
+	static SimpleHeightmap::RebuildFlags get_rebuild_flags(Tool tool)
 	{
-		if (is_heightmap_tool(tool)) return SimpleHeightmap::HEIGHTMAP;
-		if (is_splatmap_tool(tool)) return SimpleHeightmap::SPLATMAP;
-		return SimpleHeightmap::NONE;
+		if (is_heightmap_tool(tool)) return SimpleHeightmap::REBUILD_HEIGHTMAP;
+		if (is_splatmap_tool(tool)) return SimpleHeightmap::REBUILD_SPLATMAP;
+		return SimpleHeightmap::REBUILD_NONE;
 	}
 
 	static godot::Ref<godot::Image> get_affected_image(Tool tool, SimpleHeightmap& heightmap)

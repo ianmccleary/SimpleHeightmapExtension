@@ -17,16 +17,16 @@ public:
 	
 	void _notification(int32_t what);
 
-	enum ChangeType : uint8_t
+	enum RebuildFlags : uint8_t
 	{
-		NONE = 0x0,
-		HEIGHTMAP = 0x1,
-		SPLATMAP = 0x2,
-		UV = 0x4,
-		ALL = HEIGHTMAP | SPLATMAP | UV
+		REBUILD_NONE = 0x0,
+		REBUILD_HEIGHTMAP = 0x1,
+		REBUILD_SPLATMAP = 0x2,
+		REBUILD_UV = 0x4,
+		REBUILD_ALL = REBUILD_HEIGHTMAP | REBUILD_SPLATMAP | REBUILD_UV
 	};
 
-	void rebuild(ChangeType change_type);
+	void rebuild(RebuildFlags flags);
 
 	void set_mesh_size(const godot::real_t value);
 	void set_mesh_resolution(const godot::real_t value);
@@ -109,4 +109,4 @@ private:
 	godot::real_t collider_shape_max_height;
 };
 
-VARIANT_ENUM_CAST(SimpleHeightmap::ChangeType);
+VARIANT_ENUM_CAST(SimpleHeightmap::RebuildFlags);

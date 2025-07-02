@@ -376,14 +376,14 @@ int32_t SimpleHeightmapEditorPlugin::_forward_3d_gui_input(godot::Camera3D* p_vi
 								undo_redo_cache.mipmaps,
 								undo_redo_cache.format,
 								undo_redo_cache.data);
-							undo_redo->add_undo_method(selected_heightmap, "rebuild", get_change_type(selected_tool));
+							undo_redo->add_undo_method(selected_heightmap, "rebuild", get_rebuild_flags(selected_tool));
 							undo_redo->add_do_method(affected_image.ptr(), "set_data",
 								affected_image->get_width(),
 								affected_image->get_height(),
 								affected_image->has_mipmaps(),
 								affected_image->get_format(),
 								affected_image->get_data());
-							undo_redo->add_do_method(selected_heightmap, "rebuild", get_change_type(selected_tool));
+							undo_redo->add_do_method(selected_heightmap, "rebuild", get_rebuild_flags(selected_tool));
 							undo_redo->commit_action();
 						}
 						undo_redo_cache.image.unref();
@@ -463,7 +463,7 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 					image->set_pixel(x + min.x, y + min.y, buffer[x + y * size.x]);
 				}
 			}
-			selected_heightmap->rebuild(get_change_type(selected_tool));
+			selected_heightmap->rebuild(get_rebuild_flags(selected_tool));
 		}
 
 		brush_multimesh->set_visible_instance_count(godot::Math::min(gizmo_count, brush_multimesh->get_instance_count()));

@@ -42,11 +42,11 @@ void SimpleHeightmap::_bind_methods()
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_3", "new_texture"), &SimpleHeightmap::set_texture_3);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_4", "new_texture"), &SimpleHeightmap::set_texture_4);
 
-	BIND_ENUM_CONSTANT(NONE);
-	BIND_ENUM_CONSTANT(ALL);
-	BIND_ENUM_CONSTANT(HEIGHTMAP);
-	BIND_ENUM_CONSTANT(SPLATMAP);
-	BIND_ENUM_CONSTANT(UV);
+	BIND_ENUM_CONSTANT(REBUILD_NONE);
+	BIND_ENUM_CONSTANT(REBUILD_ALL);
+	BIND_ENUM_CONSTANT(REBUILD_HEIGHTMAP);
+	BIND_ENUM_CONSTANT(REBUILD_SPLATMAP);
+	BIND_ENUM_CONSTANT(REBUILD_UV);
 
 	godot::ClassDB::bind_method(godot::D_METHOD("rebuild", "change_type"), &SimpleHeightmap::rebuild);
 
@@ -120,7 +120,7 @@ void SimpleHeightmap::_notification(int what)
 	{
 		case NOTIFICATION_READY:
 		{
-			rebuild(ALL);
+			rebuild(REBUILD_ALL);
 		}
 		break;
 
@@ -212,7 +212,7 @@ namespace
 	}
 }
 
-void SimpleHeightmap::rebuild(ChangeType change_type)
+void SimpleHeightmap::rebuild(RebuildFlags flags)
 {
 	constexpr auto ELEMENT_SIZE_POSITION = sizeof(godot::Vector3);
 	constexpr auto ELEMENT_SIZE_NORMAL_TANGENT = sizeof(CompressedNormalTangent);
@@ -336,7 +336,7 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 				const auto i = (x % vertices_per_side) + (z * vertices_per_side);
 				const auto px = x * quad_size;
 				const auto pz = z * quad_size;
-				if (change_type & HEIGHTMAP)
+				if (flags & REBUILD_HEIGHTMAP)
 				{
 					auto position = godot::Vector3(px, bilinear_sample(heightmap, local_position_to_image_position(godot::Vector3(px, 0.0, pz))).r, pz);
 					auto normal = compress_normal(godot::Vector3(0.0, 1.0, 0.0));
@@ -350,12 +350,12 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 						collider_shape_max_height = godot::Math::max(position.y, collider_shape_max_height);
 					}
 				}
-				if (change_type & UV)
+				if (flags & REBUILD_UV)
 				{
 					auto uv = godot::Vector2(px, pz) * texture_size;
 					memcpy(&surface_attribute_buffer_p[i * surface_attribute_stride + surface_offsets[godot::Mesh::ARRAY_TEX_UV]], &uv, ELEMENT_SIZE_UV);
 				}
-				if (change_type & SPLATMAP)
+				if (flags & REBUILD_SPLATMAP)
 				{
 					auto color = bilinear_sample(splatmap, local_position_to_image_position(godot::Vector3(px, 0.0, pz))).to_abgr32();
 					memcpy(&surface_attribute_buffer_p[i * surface_attribute_stride + surface_offsets[godot::Mesh::ARRAY_COLOR]], &color, ELEMENT_SIZE_COLOR);
@@ -363,7 +363,7 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 			}
 		}
 		
-		if (change_type & HEIGHTMAP)
+		if (flags & REBUILD_HEIGHTMAP)
 		{
 			rserver->mesh_surface_update_vertex_region(mesh_id, 0, 0, surface_vertex_buffer);
 			rserver->mesh_set_custom_aabb(mesh_id, aabb);
@@ -388,7 +388,7 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 				pserver->body_set_shape_transform(collider_body_id, 0, collider_shape_transform);
 			}
 		}
-		if ((change_type & UV) || (change_type & SPLATMAP))
+		if ((flags & REBUILD_UV) || (flags & REBUILD_SPLATMAP))
 		{
 			rserver->mesh_surface_update_attribute_region(mesh_id, 0, 0, surface_attribute_buffer);
 		}
@@ -425,13 +425,13 @@ godot::Vector3 SimpleHeightmap::image_position_to_global_position(const godot::V
 void SimpleHeightmap::set_mesh_size(const godot::real_t value)
 {
 	mesh_size = value;
-	rebuild(ALL);
+	rebuild(REBUILD_ALL);
 }
 
 void SimpleHeightmap::set_mesh_resolution(const godot::real_t value)
 {
 	mesh_resolution = godot::Math::max(value, static_cast<godot::real_t>(0.1));
-	rebuild(ALL);
+	rebuild(REBUILD_ALL);
 }
 
 void SimpleHeightmap::set_image_size(int value)
@@ -441,27 +441,27 @@ void SimpleHeightmap::set_image_size(int value)
 		heightmap->resize(image_size, image_size);
 	if (splatmap.is_valid())
 		splatmap->resize(image_size, image_size);
-	rebuild(ALL);
+	rebuild(REBUILD_ALL);
 }
 
 void SimpleHeightmap::set_texture_size(const godot::real_t value)
 {
 	texture_size = godot::Math::max(value, static_cast<godot::real_t>(0.01));
-	rebuild(UV);
+	rebuild(REBUILD_UV);
 }
 
 void SimpleHeightmap::set_heightmap_image(const godot::Ref<godot::Image>& new_heightmap)
 {
 	heightmap = new_heightmap;
 	initialize_image(heightmap, godot::Image::FORMAT_RF, image_size);
-	rebuild(ALL);
+	rebuild(REBUILD_ALL);
 }
 
 void SimpleHeightmap::set_splatmap_image(const godot::Ref<godot::Image>& new_splatmap)
 {
 	splatmap = new_splatmap;
 	initialize_image(splatmap, godot::Image::FORMAT_RGBA8, image_size, godot::Color(1.0, 0.0, 0.0, 0.0));
-	rebuild(ALL);
+	rebuild(REBUILD_ALL);
 }
 
 void SimpleHeightmap::set_texture_1(const godot::Ref<godot::Texture2D>& new_texture)
