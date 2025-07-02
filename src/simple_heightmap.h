@@ -108,3 +108,5 @@ private:
 	godot::real_t collider_shape_min_height;
 	godot::real_t collider_shape_max_height;
 };
+
+VARIANT_ENUM_CAST(SimpleHeightmap::ChangeType);

@@ -42,6 +42,14 @@ void SimpleHeightmap::_bind_methods()
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_3", "new_texture"), &SimpleHeightmap::set_texture_3);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_4", "new_texture"), &SimpleHeightmap::set_texture_4);
 
+	BIND_ENUM_CONSTANT(NONE);
+	BIND_ENUM_CONSTANT(ALL);
+	BIND_ENUM_CONSTANT(HEIGHTMAP);
+	BIND_ENUM_CONSTANT(SPLATMAP);
+	BIND_ENUM_CONSTANT(UV);
+
+	godot::ClassDB::bind_method(godot::D_METHOD("rebuild", "change_type"), &SimpleHeightmap::rebuild);
+
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_size"), "set_mesh_size", "get_mesh_size");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::INT, "image_size"), "set_image_size", "get_image_size");

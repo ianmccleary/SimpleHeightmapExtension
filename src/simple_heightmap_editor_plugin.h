@@ -69,6 +69,13 @@ private:
 		return false;
 	}
 
+	static SimpleHeightmap::ChangeType get_change_type(Tool tool)
+	{
+		if (is_heightmap_tool(tool)) return SimpleHeightmap::HEIGHTMAP;
+		if (is_splatmap_tool(tool)) return SimpleHeightmap::SPLATMAP;
+		return SimpleHeightmap::NONE;
+	}
+
 	static godot::Ref<godot::Image> get_affected_image(Tool tool, SimpleHeightmap& heightmap)
 	{
 		if (is_heightmap_tool(tool)) return heightmap.get_heightmap_image();
@@ -101,6 +108,17 @@ private:
 
 	SimpleHeightmap* selected_heightmap = nullptr;
 	Tool selected_tool = Tool::None;
+
+	struct UndoRedoCache
+	{
+		godot::Ref<godot::Image> image;
+		int32_t width;
+		int32_t height;
+		bool mipmaps;
+		godot::Image::Format format;
+		godot::PackedByteArray data;
+	};
+	UndoRedoCache undo_redo_cache;
 
 	godot::Control* ui = nullptr;
 	godot::Button* button_raise = nullptr;

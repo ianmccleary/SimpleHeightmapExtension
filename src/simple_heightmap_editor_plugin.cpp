@@ -5,7 +5,9 @@
 #include <godot_cpp/classes/box_mesh.hpp>
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/editor_spin_slider.hpp>
+#include <godot_cpp/classes/editor_undo_redo_manager.hpp>
 #include <godot_cpp/classes/h_box_container.hpp>
+#include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
@@ -342,12 +344,50 @@ int32_t SimpleHeightmapEditorPlugin::_forward_3d_gui_input(godot::Camera3D* p_vi
 			{
 				if (mouse_button_event->is_pressed() && !mouse_pressed && mouse_over)
 				{
+					// Copy data for undo/redo
+					const auto affected_image = get_affected_image(selected_tool, *selected_heightmap);
+					if (affected_image.is_valid())
+					{
+						undo_redo_cache.data = affected_image->get_data(); // Data is always returned as a copy
+						undo_redo_cache.format = affected_image->get_format();
+						undo_redo_cache.height = affected_image->get_height();
+						undo_redo_cache.image = affected_image;
+						undo_redo_cache.mipmaps = affected_image->has_mipmaps();
+						undo_redo_cache.width = affected_image->get_width();
+					}
+
 					flatten_target = mouse_global_position.y;
 					mouse_pressed = true;
 					return AFTER_GUI_INPUT_STOP;
 				}
 				else if (mouse_button_event->is_released() && mouse_pressed)
 				{
+					// Commit undo/redo action
+					if (undo_redo_cache.image.is_valid())
+					{
+						const auto undo_redo = get_undo_redo();
+						if (undo_redo != nullptr)
+						{
+							const auto affected_image = get_affected_image(selected_tool, *selected_heightmap);
+							undo_redo->create_action("Modify Heightmap");
+							undo_redo->add_undo_method(undo_redo_cache.image.ptr(), "set_data",
+								undo_redo_cache.width,
+								undo_redo_cache.height,
+								undo_redo_cache.mipmaps,
+								undo_redo_cache.format,
+								undo_redo_cache.data);
+							undo_redo->add_undo_method(selected_heightmap, "rebuild", get_change_type(selected_tool));
+							undo_redo->add_do_method(affected_image.ptr(), "set_data",
+								affected_image->get_width(),
+								affected_image->get_height(),
+								affected_image->has_mipmaps(),
+								affected_image->get_format(),
+								affected_image->get_data());
+							undo_redo->add_do_method(selected_heightmap, "rebuild", get_change_type(selected_tool));
+							undo_redo->commit_action();
+						}
+						undo_redo_cache.image.unref();
+					}
 					mouse_pressed = false;
 					return AFTER_GUI_INPUT_STOP;
 				}
@@ -423,8 +463,7 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 					image->set_pixel(x + min.x, y + min.y, buffer[x + y * size.x]);
 				}
 			}
-			auto change_type = is_heightmap_tool(selected_tool) ? SimpleHeightmap::HEIGHTMAP : SimpleHeightmap::SPLATMAP;
-			selected_heightmap->rebuild(change_type);
+			selected_heightmap->rebuild(get_change_type(selected_tool));
 		}
 
 		brush_multimesh->set_visible_instance_count(godot::Math::min(gizmo_count, brush_multimesh->get_instance_count()));
