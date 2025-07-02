@@ -24,16 +24,16 @@ void SimpleHeightmapEditorPlugin::_enter_tree()
 	auto box_mesh = godot::Ref<godot::BoxMesh>(memnew(godot::BoxMesh));
 	box_mesh->set_size(godot::Vector3(1.0, 1.0, 1.0));
 
-	gizmo_multimesh = godot::Ref<godot::MultiMesh>(memnew(godot::MultiMesh));
-	gizmo_multimesh->set_transform_format(godot::MultiMesh::TRANSFORM_3D);
-	gizmo_multimesh->set_instance_count(64 * 64);
-	gizmo_multimesh->set_visible_instance_count(0);
-	gizmo_multimesh->set_mesh(box_mesh);
+	brush_multimesh = godot::Ref<godot::MultiMesh>(memnew(godot::MultiMesh));
+	brush_multimesh->set_transform_format(godot::MultiMesh::TRANSFORM_3D);
+	brush_multimesh->set_instance_count(64 * 64);
+	brush_multimesh->set_visible_instance_count(0);
+	brush_multimesh->set_mesh(box_mesh);
 
-	gizmo = memnew(godot::MultiMeshInstance3D);
-	gizmo->set_multimesh(gizmo_multimesh);
-	gizmo->set_cast_shadows_setting(godot::GeometryInstance3D::SHADOW_CASTING_SETTING_OFF);
-	add_child(gizmo);
+	brush_node = memnew(godot::MultiMeshInstance3D);
+	brush_node->set_multimesh(brush_multimesh);
+	brush_node->set_cast_shadows_setting(godot::GeometryInstance3D::SHADOW_CASTING_SETTING_OFF);
+	add_child(brush_node);
 
 	selected_tool = Tool::Heightmap_Raise;
 
@@ -176,10 +176,10 @@ void SimpleHeightmapEditorPlugin::_exit_tree()
 
 	destroy_ui();
 
-	gizmo->queue_free();
-	gizmo = nullptr;
+	brush_node->queue_free();
+	brush_node = nullptr;
 
-	gizmo_multimesh = godot::Ref<godot::BoxMesh>();
+	brush_multimesh.unref();
 }
 
 void SimpleHeightmapEditorPlugin::destroy_ui()
@@ -204,8 +204,8 @@ void SimpleHeightmapEditorPlugin::_edit(godot::Object *p_object)
 {
 	selected_heightmap = godot::Object::cast_to<SimpleHeightmap>(p_object);
 
-	// Hide gizmo when de-selecting
-	gizmo->set_visible(selected_heightmap != nullptr);
+	// Hide brush when de-selecting
+	brush_node->set_visible(selected_heightmap != nullptr);
 
 	// Only show panel if a heightmap is selected
 	if (!ui->is_inside_tree() && selected_heightmap != nullptr)
@@ -333,12 +333,12 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 				{
 					buffer.set(x + y * size.x, modify_pixel(image, ix, iy, t, p_delta));
 				}
-				if (gizmo_count < gizmo_multimesh->get_instance_count())
+				if (gizmo_count < brush_multimesh->get_instance_count())
 				{
 					godot::Transform3D transform;
 					transform.set_basis(godot::Basis(godot::Quaternion(), godot::Vector3(t, t, t)));
 					transform.set_origin(selected_heightmap->image_position_to_global_position(godot::Vector2(ix, iy)));
-					gizmo_multimesh->set_instance_transform(gizmo_count, transform);
+					brush_multimesh->set_instance_transform(gizmo_count, transform);
 					++gizmo_count;
 				}
 			}
@@ -358,12 +358,12 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 			selected_heightmap->rebuild(change_type);
 		}
 
-		gizmo_multimesh->set_visible_instance_count(godot::Math::min(gizmo_count, gizmo_multimesh->get_instance_count()));
-		gizmo->set_visible(true);
+		brush_multimesh->set_visible_instance_count(godot::Math::min(gizmo_count, brush_multimesh->get_instance_count()));
+		brush_node->set_visible(true);
 	}
 	else
 	{
-		gizmo->set_visible(false);
+		brush_node->set_visible(false);
 	}
 }
 

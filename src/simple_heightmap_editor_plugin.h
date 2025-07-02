@@ -106,9 +106,8 @@ private:
 	godot::Button* button_texture_3 = nullptr;
 	godot::Button* button_texture_4 = nullptr;
 
-	godot::MultiMeshInstance3D* gizmo = nullptr;
-	godot::Ref<godot::MultiMesh> gizmo_multimesh = nullptr;
-
+	godot::MultiMeshInstance3D* brush_node = nullptr;
+	godot::Ref<godot::MultiMesh> brush_multimesh = nullptr;
 	double brush_radius;
 	double brush_strength;
 	double brush_ease;
