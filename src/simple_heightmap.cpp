@@ -20,8 +20,7 @@ constexpr const char* default_texture_4_param = "texture_map_4";
 void SimpleHeightmap::_bind_methods()
 {
 	const auto image_usage_flags =
-		godot::PROPERTY_USAGE_DEFAULT |
-		godot::PROPERTY_USAGE_READ_ONLY |
+		godot::PROPERTY_USAGE_STORAGE |
 		godot::PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT;
 
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
