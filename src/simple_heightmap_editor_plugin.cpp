@@ -6,21 +6,29 @@
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/editor_spin_slider.hpp>
 #include <godot_cpp/classes/h_box_container.hpp>
+#include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
 #include <godot_cpp/classes/input_event_mouse_motion.hpp>
 #include <godot_cpp/classes/label.hpp>
 #include <godot_cpp/classes/physics_direct_space_state3d.hpp>
 #include <godot_cpp/classes/physics_ray_query_parameters3d.hpp>
+#include <godot_cpp/classes/physics_server3d.hpp>
+#include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/v_box_container.hpp>
 #include <godot_cpp/classes/world3d.hpp>
 
 void SimpleHeightmapEditorPlugin::_bind_methods()
-{
-}
+{ }
 
 void SimpleHeightmapEditorPlugin::_enter_tree()
 {
+	const auto rserver = godot::RenderingServer::get_singleton();
+	if (rserver != nullptr)
+	{
+		empty_texture_icon = godot::ImageTexture::create_from_image(rserver->texture_2d_get(rserver->get_white_texture()));
+	}
+
 	auto box_mesh = godot::Ref<godot::BoxMesh>(memnew(godot::BoxMesh));
 	box_mesh->set_size(godot::Vector3(1.0, 1.0, 1.0));
 
@@ -45,6 +53,11 @@ void SimpleHeightmapEditorPlugin::_enter_tree()
 	add_node_3d_gizmo_plugin(gizmo_plugin);
 
 	create_ui();
+
+	texture_1_changed_callable = callable_mp(this, &SimpleHeightmapEditorPlugin::refresh_texture_icon).bind(button_texture_1);
+	texture_2_changed_callable = callable_mp(this, &SimpleHeightmapEditorPlugin::refresh_texture_icon).bind(button_texture_2);
+	texture_3_changed_callable = callable_mp(this, &SimpleHeightmapEditorPlugin::refresh_texture_icon).bind(button_texture_3);
+	texture_4_changed_callable = callable_mp(this, &SimpleHeightmapEditorPlugin::refresh_texture_icon).bind(button_texture_4);
 }
 
 namespace UIHelpers
@@ -62,6 +75,17 @@ namespace UIHelpers
 			button->set_theme_type_variation(THEME_FLAT_BUTTON);
 		}
 		button->set_pressed(false);
+		return button;
+	}
+
+	godot::Button* create_icon_button(int32_t icon_size, bool toggle_mode, bool pressed)
+	{
+		auto button = create_button("", toggle_mode, pressed);
+		button->set_icon_alignment(godot::HORIZONTAL_ALIGNMENT_CENTER);
+		button->set_vertical_icon_alignment(godot::VERTICAL_ALIGNMENT_CENTER);
+		button->set_expand_icon(true);
+		button->set_custom_minimum_size(godot::Vector2(icon_size, icon_size));
+		button->add_theme_constant_override("icon_max_width", icon_size);
 		return button;
 	}
 
@@ -91,18 +115,21 @@ void SimpleHeightmapEditorPlugin::create_ui()
 		constexpr auto SIGNAL_PRESSED = "pressed";
 		constexpr auto SIGNAL_VALUE_CHANGED = "value_changed";
 
+		constexpr auto ICON_SIZE = 64;
+
 		ui = memnew(godot::VBoxContainer);
 
 		auto hbox_a = memnew(godot::HBoxContainer);
 		auto hbox_b = memnew(godot::HBoxContainer);
+		auto hbox_c = memnew(godot::HBoxContainer);
 
 		button_raise = UIHelpers::create_button("Raise/Lower", true, true);
 		button_smooth = UIHelpers::create_button("Smooth", true, false);
 		button_flatten = UIHelpers::create_button("Flatten", true, false);
-		button_texture_1 = UIHelpers::create_button("Texture 1", true, false);
-		button_texture_2 = UIHelpers::create_button("Texture 2", true, false);
-		button_texture_3 = UIHelpers::create_button("Texture 3", true, false);
-		button_texture_4 = UIHelpers::create_button("Texture 4", true, false);
+		button_texture_1 = UIHelpers::create_icon_button(ICON_SIZE, true, false);
+		button_texture_2 = UIHelpers::create_icon_button(ICON_SIZE, true, false);
+		button_texture_3 = UIHelpers::create_icon_button(ICON_SIZE, true, false);
+		button_texture_4 = UIHelpers::create_icon_button(ICON_SIZE, true, false);
 
 		auto radius_slider = UIHelpers::create_editor_spin_slider(brush_radius, 0.0, 25.0, 0.1, true);
 		auto strength_slider = UIHelpers::create_editor_spin_slider(brush_strength, 0.0, 10.0, 0.1, true);
@@ -115,9 +142,11 @@ void SimpleHeightmapEditorPlugin::create_ui()
 		
 		hbox_b->add_child(button_texture_1);
 		hbox_b->add_child(button_texture_2);
-		hbox_b->add_child(button_texture_3);
-		hbox_b->add_child(button_texture_4);
 		ui->add_child(hbox_b);
+
+		hbox_c->add_child(button_texture_3);
+		hbox_c->add_child(button_texture_4);
+		ui->add_child(hbox_c);
 		
 		ui->add_child(UIHelpers::create_label("Radius"));
 		ui->add_child(radius_slider);
@@ -138,6 +167,8 @@ void SimpleHeightmapEditorPlugin::create_ui()
 		radius_slider->connect(SIGNAL_VALUE_CHANGED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_brush_radius_changed));
 		strength_slider->connect(SIGNAL_VALUE_CHANGED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_brush_strength_changed));
 		ease_slider->connect(SIGNAL_VALUE_CHANGED, callable_mp(this, &SimpleHeightmapEditorPlugin::on_brush_ease_changed));
+		
+		refresh_texture_icons();
 	}
 }
 
@@ -172,7 +203,7 @@ void SimpleHeightmapEditorPlugin::on_brush_ease_changed(double value)
 void SimpleHeightmapEditorPlugin::_exit_tree()
 {
 	remove_node_3d_gizmo_plugin(gizmo_plugin);
-	gizmo_plugin = godot::Ref<SimpleHeightmapGizmoPlugin>();
+	gizmo_plugin.unref();
 
 	destroy_ui();
 
@@ -180,6 +211,7 @@ void SimpleHeightmapEditorPlugin::_exit_tree()
 	brush_node = nullptr;
 
 	brush_multimesh.unref();
+	empty_texture_icon.unref();
 }
 
 void SimpleHeightmapEditorPlugin::destroy_ui()
@@ -202,7 +234,25 @@ bool SimpleHeightmapEditorPlugin::_handles(godot::Object *p_object) const
 
 void SimpleHeightmapEditorPlugin::_edit(godot::Object *p_object)
 {
+	if (selected_heightmap != nullptr)
+	{
+		selected_heightmap->disconnect("texture_1_changed", texture_1_changed_callable);
+		selected_heightmap->disconnect("texture_2_changed", texture_2_changed_callable);
+		selected_heightmap->disconnect("texture_3_changed", texture_3_changed_callable);
+		selected_heightmap->disconnect("texture_4_changed", texture_4_changed_callable);
+	}
+
 	selected_heightmap = godot::Object::cast_to<SimpleHeightmap>(p_object);
+
+	if (selected_heightmap != nullptr)
+	{
+		selected_heightmap->connect("texture_1_changed", texture_1_changed_callable);
+		selected_heightmap->connect("texture_2_changed", texture_2_changed_callable);
+		selected_heightmap->connect("texture_3_changed", texture_3_changed_callable);
+		selected_heightmap->connect("texture_4_changed", texture_4_changed_callable);
+	}
+
+	refresh_texture_icons();
 
 	// Hide brush when de-selecting
 	brush_node->set_visible(selected_heightmap != nullptr);
@@ -212,6 +262,25 @@ void SimpleHeightmapEditorPlugin::_edit(godot::Object *p_object)
 		add_control_to_container(CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT, ui);
 	else if (ui->is_inside_tree() && selected_heightmap == nullptr)
 		remove_control_from_container(CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT, ui);
+}
+
+void SimpleHeightmapEditorPlugin::refresh_texture_icons()
+{
+	if (selected_heightmap != nullptr)
+	{
+		refresh_texture_icon(selected_heightmap->get_texture_1(), button_texture_1);
+		refresh_texture_icon(selected_heightmap->get_texture_2(), button_texture_2);
+		refresh_texture_icon(selected_heightmap->get_texture_3(), button_texture_3);
+		refresh_texture_icon(selected_heightmap->get_texture_4(), button_texture_4);
+	}
+}
+
+void SimpleHeightmapEditorPlugin::refresh_texture_icon(const godot::Ref<godot::Texture2D>& texture, godot::Button* button)
+{
+	if (button != nullptr)
+	{
+		button->set_button_icon(texture.is_valid() ? texture : empty_texture_icon);
+	}
 }
 
 namespace

@@ -1,16 +1,13 @@
 #include "simple_heightmap.h"
-#include <godot_cpp/classes/convex_polygon_shape3d.hpp>
+#include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/physics_server3d.hpp>
-#include <godot_cpp/classes/random_number_generator.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
-#include <godot_cpp/classes/triangle_mesh.hpp>
-#include <godot_cpp/classes/world3d.hpp>
-#include <godot_cpp/core/class_db.hpp>
-#include <godot_cpp/core/math.hpp>
-
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <godot_cpp/variant/variant.hpp>
+#include <godot_cpp/classes/world3d.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/core/math.hpp>
 
 constexpr const char* default_texture_1_param = "texture_map_1";
 constexpr const char* default_texture_2_param = "texture_map_2";
@@ -55,6 +52,11 @@ void SimpleHeightmap::_bind_methods()
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_2", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_2", "get_texture_2");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_3", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_3", "get_texture_3");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_4", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_4", "get_texture_4");
+
+	ADD_SIGNAL(godot::MethodInfo("texture_1_changed", godot::PropertyInfo(godot::Variant::OBJECT, "new_texture")));
+	ADD_SIGNAL(godot::MethodInfo("texture_2_changed", godot::PropertyInfo(godot::Variant::OBJECT, "new_texture")));
+	ADD_SIGNAL(godot::MethodInfo("texture_3_changed", godot::PropertyInfo(godot::Variant::OBJECT, "new_texture")));
+	ADD_SIGNAL(godot::MethodInfo("texture_4_changed", godot::PropertyInfo(godot::Variant::OBJECT, "new_texture")));
 }
 
 SimpleHeightmap::SimpleHeightmap()
@@ -458,24 +460,28 @@ void SimpleHeightmap::set_texture_1(const godot::Ref<godot::Texture2D>& new_text
 {
 	texture_1 = new_texture;
 	update_material_texture_parameter(default_texture_1_param, texture_1);
+	emit_signal("texture_1_changed", texture_1);
 }
 
 void SimpleHeightmap::set_texture_2(const godot::Ref<godot::Texture2D>& new_texture)
 {
 	texture_2 = new_texture;
 	update_material_texture_parameter(default_texture_2_param, texture_2);
+	emit_signal("texture_2_changed", texture_2);
 }
 
 void SimpleHeightmap::set_texture_3(const godot::Ref<godot::Texture2D>& new_texture)
 {
 	texture_3 = new_texture;
 	update_material_texture_parameter(default_texture_3_param, texture_3);
+	emit_signal("texture_3_changed", texture_3);
 }
 
 void SimpleHeightmap::set_texture_4(const godot::Ref<godot::Texture2D>& new_texture)
 {
 	texture_4 = new_texture;
 	update_material_texture_parameter(default_texture_4_param, texture_4);
+	emit_signal("texture_4_changed", texture_4);
 }
 
 void SimpleHeightmap::update_material_texture_parameter(const char* parameter_name, const godot::Ref<godot::Texture2D>& texture)

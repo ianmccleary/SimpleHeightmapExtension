@@ -79,6 +79,11 @@ private:
 	void create_ui();
 	void destroy_ui();
 
+	void refresh_texture_icons();
+	void refresh_texture_icon(const godot::Ref<godot::Texture2D>& texture, godot::Button* button);
+
+	godot::Ref<godot::Texture2D> empty_texture_icon;
+
 	void on_tool_selected(uint8_t tool);
 	void on_brush_radius_changed(double value);
 	void on_brush_strength_changed(double value);
@@ -105,6 +110,10 @@ private:
 	godot::Button* button_texture_2 = nullptr;
 	godot::Button* button_texture_3 = nullptr;
 	godot::Button* button_texture_4 = nullptr;
+	godot::Callable texture_1_changed_callable;
+	godot::Callable texture_2_changed_callable;
+	godot::Callable texture_3_changed_callable;
+	godot::Callable texture_4_changed_callable;
 
 	godot::MultiMeshInstance3D* brush_node = nullptr;
 	godot::Ref<godot::MultiMesh> brush_multimesh = nullptr;

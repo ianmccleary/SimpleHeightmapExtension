@@ -1,11 +1,7 @@
 #pragma once
 
-#include <godot_cpp/classes/collision_shape3d.hpp>
 #include <godot_cpp/classes/geometry_instance3d.hpp>
-#include <godot_cpp/classes/height_map_shape3d.hpp>
 #include <godot_cpp/classes/image.hpp>
-#include <godot_cpp/classes/mesh.hpp>
-#include <godot_cpp/classes/static_body3d.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
 
 class SimpleHeightmap : public godot::GeometryInstance3D
