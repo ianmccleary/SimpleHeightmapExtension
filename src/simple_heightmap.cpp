@@ -387,6 +387,8 @@ void SimpleHeightmap::rebuild(RebuildFlags flags)
 					godot::Vector3(get_half_mesh_size(), 0.0, get_half_mesh_size()));
 				pserver->body_set_shape_transform(collider_body_id, 0, collider_shape_transform);
 			}
+
+			update_gizmos();
 		}
 		if ((flags & REBUILD_UV) || (flags & REBUILD_SPLATMAP))
 		{
