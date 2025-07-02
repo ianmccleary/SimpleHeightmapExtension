@@ -38,6 +38,9 @@ public:
 	void set_texture_2(const godot::Ref<godot::Texture2D>& new_texture);
 	void set_texture_3(const godot::Ref<godot::Texture2D>& new_texture);
 	void set_texture_4(const godot::Ref<godot::Texture2D>& new_texture);
+	void set_collider_layer(uint32_t layer);
+	void set_collider_mask(uint32_t mask);
+	void set_collider_priority(float priority);
 
 	[[nodiscard]] godot::real_t get_mesh_size() const { return mesh_size; }
 	[[nodiscard]] godot::real_t get_half_mesh_size() const { return mesh_size * static_cast<godot::real_t>(0.5); }
@@ -50,6 +53,9 @@ public:
 	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_2() const { return texture_2; }
 	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_3() const { return texture_3; }
 	[[nodiscard]] godot::Ref<godot::Texture2D> get_texture_4() const { return texture_4; }
+	[[nodiscard]] uint32_t get_collider_layer() const { return collider_layer; }
+	[[nodiscard]] uint32_t get_collider_mask() const { return collider_mask; }
+	[[nodiscard]] float get_collider_priority() const { return collider_priority; }
 	
 	godot::Vector2 local_position_to_image_position(const godot::Vector3& local_position) const;
 	godot::Vector2 global_position_to_image_position(const godot::Vector3& global_position) const;
@@ -102,6 +108,9 @@ private:
 	uint32_t surface_normal_tangent_stride;
 	uint32_t surface_attribute_stride;
 
+	uint32_t collider_layer = 1;
+	uint32_t collider_mask = 1;
+	float collider_priority = 1.0f;
 	godot::RID collider_body_id;
 	godot::RID collider_shape_id;
 	godot::PackedRealArray collider_shape_data;

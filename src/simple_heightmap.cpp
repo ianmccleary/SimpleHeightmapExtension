@@ -30,6 +30,9 @@ void SimpleHeightmap::_bind_methods()
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_2"), &SimpleHeightmap::get_texture_2);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_3"), &SimpleHeightmap::get_texture_3);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_4"), &SimpleHeightmap::get_texture_4);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_collider_layer"), &SimpleHeightmap::get_collider_layer);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_collider_mask"), &SimpleHeightmap::get_collider_mask);
+	godot::ClassDB::bind_method(godot::D_METHOD("get_collider_priority"), &SimpleHeightmap::get_collider_priority);
 
 	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_size", "value"), &SimpleHeightmap::set_mesh_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_resolution", "value"), &SimpleHeightmap::set_mesh_resolution);
@@ -41,6 +44,9 @@ void SimpleHeightmap::_bind_methods()
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_2", "new_texture"), &SimpleHeightmap::set_texture_2);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_3", "new_texture"), &SimpleHeightmap::set_texture_3);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_4", "new_texture"), &SimpleHeightmap::set_texture_4);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_collider_layer", "layer"), &SimpleHeightmap::set_collider_layer);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_collider_mask", "mask"), &SimpleHeightmap::set_collider_mask);
+	godot::ClassDB::bind_method(godot::D_METHOD("set_collider_priority", "priority"), &SimpleHeightmap::set_collider_priority);
 
 	BIND_ENUM_CONSTANT(REBUILD_NONE);
 	BIND_ENUM_CONSTANT(REBUILD_ALL);
@@ -60,6 +66,9 @@ void SimpleHeightmap::_bind_methods()
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_2", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_2", "get_texture_2");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_3", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_3", "get_texture_3");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "texture_4", godot::PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture_4", "get_texture_4");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::INT, "collider_layer", godot::PROPERTY_HINT_LAYERS_3D_PHYSICS), "set_collider_layer", "get_collider_layer");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::INT, "collider_mask", godot::PROPERTY_HINT_LAYERS_3D_PHYSICS), "set_collider_mask", "get_collider_mask");
+	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "collider_priority"), "set_collider_priority", "get_collider_priority");
 
 	ADD_SIGNAL(godot::MethodInfo("texture_1_changed", godot::PropertyInfo(godot::Variant::OBJECT, "new_texture")));
 	ADD_SIGNAL(godot::MethodInfo("texture_2_changed", godot::PropertyInfo(godot::Variant::OBJECT, "new_texture")));
@@ -108,6 +117,9 @@ SimpleHeightmap::SimpleHeightmap()
 		pserver->body_set_mode(collider_body_id, godot::PhysicsServer3D::BODY_MODE_STATIC);
 		pserver->body_set_ray_pickable(collider_body_id, true);
 		pserver->body_attach_object_instance_id(collider_body_id, get_instance_id());
+		pserver->body_set_collision_layer(collider_body_id, collider_layer);
+		pserver->body_set_collision_mask(collider_body_id, collider_mask);
+		pserver->body_set_collision_priority(collider_body_id, collider_priority);
 
 		collider_shape_id = pserver->heightmap_shape_create();
 		pserver->body_add_shape(collider_body_id, collider_shape_id);
@@ -493,6 +505,36 @@ void SimpleHeightmap::set_texture_4(const godot::Ref<godot::Texture2D>& new_text
 	texture_4 = new_texture;
 	update_material_texture_parameter(default_texture_4_param, texture_4);
 	emit_signal("texture_4_changed", texture_4);
+}
+
+void SimpleHeightmap::set_collider_layer(uint32_t layer)
+{
+	collider_layer = layer;
+	const auto pserver = godot::PhysicsServer3D::get_singleton();
+	if (pserver)
+	{
+		pserver->body_set_collision_layer(collider_body_id, collider_layer);
+	}
+}
+
+void SimpleHeightmap::set_collider_mask(uint32_t mask)
+{
+	collider_mask = mask;
+	const auto pserver = godot::PhysicsServer3D::get_singleton();
+	if (pserver)
+	{
+		pserver->body_set_collision_mask(collider_body_id, collider_mask);
+	}
+}
+
+void SimpleHeightmap::set_collider_priority(float priority)
+{
+	collider_priority = priority;
+	const auto pserver = godot::PhysicsServer3D::get_singleton();
+	if (pserver)
+	{
+		pserver->body_set_collision_priority(collider_body_id, collider_priority);
+	}
 }
 
 void SimpleHeightmap::update_material_texture_parameter(const char* parameter_name, const godot::Ref<godot::Texture2D>& texture)
