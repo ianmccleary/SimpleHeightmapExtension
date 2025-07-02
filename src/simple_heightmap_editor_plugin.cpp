@@ -200,11 +200,6 @@ bool SimpleHeightmapEditorPlugin::_handles(godot::Object *p_object) const
 	return godot::Object::cast_to<SimpleHeightmap>(p_object) != nullptr;
 }
 
-void SimpleHeightmapEditorPlugin::_make_visible(bool p_visible)
-{
-	// TODO
-}
-
 void SimpleHeightmapEditorPlugin::_edit(godot::Object *p_object)
 {
 	selected_heightmap = godot::Object::cast_to<SimpleHeightmap>(p_object);

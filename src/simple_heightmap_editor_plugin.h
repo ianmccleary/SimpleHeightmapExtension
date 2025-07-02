@@ -27,7 +27,6 @@ public:
 
 	void _process(double p_delta) override;
 	bool _handles(godot::Object *p_object) const override;
-	void _make_visible(bool p_visible) override;
 	void _edit(godot::Object *p_object) override;
 
 	int32_t _forward_3d_gui_input(godot::Camera3D *p_viewport_camera, const godot::Ref<godot::InputEvent> &p_event) override;
