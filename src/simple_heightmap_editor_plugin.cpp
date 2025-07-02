@@ -32,7 +32,7 @@ void SimpleHeightmapEditorPlugin::_enter_tree()
 	}
 
 	auto box_mesh = godot::Ref<godot::BoxMesh>(memnew(godot::BoxMesh));
-	box_mesh->set_size(godot::Vector3(1.0, 1.0, 1.0));
+	box_mesh->set_size(godot::Vector3(0.5, 0.25, 0.5));
 
 	brush_multimesh = godot::Ref<godot::MultiMesh>(memnew(godot::MultiMesh));
 	brush_multimesh->set_transform_format(godot::MultiMesh::TRANSFORM_3D);
