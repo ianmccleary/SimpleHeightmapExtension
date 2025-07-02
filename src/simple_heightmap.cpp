@@ -319,6 +319,7 @@ void SimpleHeightmap::rebuild(RebuildFlags flags)
 
 		const auto vertices_per_side = get_vertices_per_side();
 		const auto quad_size = get_quad_size();
+		const auto uv_scale = quad_size / texture_size;
 
 		auto surface_vertex_buffer_p = surface_vertex_buffer.ptrw();
 		auto surface_attribute_buffer_p = surface_attribute_buffer.ptrw();
@@ -352,7 +353,7 @@ void SimpleHeightmap::rebuild(RebuildFlags flags)
 				}
 				if (flags & REBUILD_UV)
 				{
-					auto uv = godot::Vector2(px, pz) * texture_size;
+					auto uv = godot::Vector2(x, z) * uv_scale;
 					memcpy(&surface_attribute_buffer_p[i * surface_attribute_stride + surface_offsets[godot::Mesh::ARRAY_TEX_UV]], &uv, ELEMENT_SIZE_UV);
 				}
 				if (flags & REBUILD_SPLATMAP)
