@@ -32,6 +32,7 @@ void SimpleHeightmapEditorPlugin::_enter_tree()
 
 	gizmo = memnew(godot::MultiMeshInstance3D);
 	gizmo->set_multimesh(gizmo_multimesh);
+	gizmo->set_cast_shadows_setting(godot::GeometryInstance3D::SHADOW_CASTING_SETTING_OFF);
 	add_child(gizmo);
 
 	selected_tool = Tool::Heightmap_Raise;
