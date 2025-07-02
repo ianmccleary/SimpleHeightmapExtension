@@ -8,6 +8,15 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/math.hpp>
 
+#include <godot_cpp/classes/shader.hpp>
+#include <godot_cpp/classes/shader_material.hpp>
+#include <godot_cpp/variant/variant.hpp>
+
+constexpr const char* default_texture_1_param = "texture_map_1";
+constexpr const char* default_texture_2_param = "texture_map_2";
+constexpr const char* default_texture_3_param = "texture_map_3";
+constexpr const char* default_texture_4_param = "texture_map_4";
+
 void SimpleHeightmap::_bind_methods()
 {
 	const auto image_usage_flags =
@@ -54,6 +63,30 @@ SimpleHeightmap::SimpleHeightmap()
 	const auto rserver = godot::RenderingServer::get_singleton();
 	if (rserver != nullptr)
 	{
+		shader_id = rserver->shader_create();
+		rserver->shader_set_code(shader_id, godot::vformat(R"(
+			shader_type spatial;
+
+			uniform sampler2D %s : source_color;
+			uniform sampler2D %s : source_color;
+			uniform sampler2D %s : source_color;
+			uniform sampler2D %s : source_color;
+
+			void fragment()
+			{
+				vec4 texture_1 = texture(%s, UV);
+				vec4 texture_2 = texture(%s, UV);
+				vec4 texture_3 = texture(%s, UV);
+				vec4 texture_4 = texture(%s, UV);
+				vec4 output = normalize((texture_1 * COLOR.r) + (texture_2 * COLOR.g) + (texture_3 * COLOR.b) + (texture_4 * COLOR.a));
+				ALBEDO = output.rgb;
+			})",
+			default_texture_1_param, default_texture_2_param, default_texture_3_param, default_texture_4_param,
+			default_texture_1_param, default_texture_2_param, default_texture_3_param, default_texture_4_param));
+
+		material_id = rserver->material_create();
+		rserver->material_set_shader(material_id, shader_id);
+
 		mesh_id = rserver->mesh_create();
 		set_base(mesh_id);
 	}
@@ -129,6 +162,8 @@ SimpleHeightmap::~SimpleHeightmap()
 	if (rserver != nullptr)
 	{
 		rserver->free_rid(mesh_id);
+		rserver->free_rid(material_id);
+		rserver->free_rid(shader_id);
 	}
 }
 
@@ -250,6 +285,7 @@ void SimpleHeightmap::rebuild(ChangeType change_type)
 
 			rserver->mesh_clear(mesh_id);
 			rserver->mesh_add_surface(mesh_id, surface_dict);
+			rserver->mesh_surface_set_material(mesh_id, 0, material_id);
 
 			// Cache information to use when updating the mesh
 			const auto surface = rserver->mesh_get_surface(mesh_id, 0);
@@ -417,6 +453,39 @@ void SimpleHeightmap::set_splatmap_image(const godot::Ref<godot::Image>& new_spl
 	splatmap = new_splatmap;
 	initialize_image(splatmap, godot::Image::FORMAT_RGBA8, image_size, godot::Color(1.0, 0.0, 0.0, 0.0));
 	rebuild(ALL);
+}
+
+void SimpleHeightmap::set_texture_1(const godot::Ref<godot::Texture2D>& new_texture)
+{
+	texture_1 = new_texture;
+	update_material_texture_parameter(default_texture_1_param, texture_1);
+}
+
+void SimpleHeightmap::set_texture_2(const godot::Ref<godot::Texture2D>& new_texture)
+{
+	texture_2 = new_texture;
+	update_material_texture_parameter(default_texture_2_param, texture_2);
+}
+
+void SimpleHeightmap::set_texture_3(const godot::Ref<godot::Texture2D>& new_texture)
+{
+	texture_3 = new_texture;
+	update_material_texture_parameter(default_texture_3_param, texture_3);
+}
+
+void SimpleHeightmap::set_texture_4(const godot::Ref<godot::Texture2D>& new_texture)
+{
+	texture_4 = new_texture;
+	update_material_texture_parameter(default_texture_4_param, texture_4);
+}
+
+void SimpleHeightmap::update_material_texture_parameter(const char* parameter_name, const godot::Ref<godot::Texture2D>& texture)
+{
+	const auto rserver = godot::RenderingServer::get_singleton();
+	if (rserver != nullptr && material_id.is_valid())
+	{
+		rserver->material_set_param(material_id, parameter_name, texture.is_valid() ? texture->get_rid() : godot::RID());
+	}
 }
 
 void SimpleHeightmap::initialize_image(const godot::Ref<godot::Image>& image, godot::Image::Format format, int32_t size, godot::Color default_color)

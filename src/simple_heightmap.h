@@ -38,10 +38,10 @@ public:
 	void set_texture_size(const godot::real_t value);
 	void set_heightmap_image(const godot::Ref<godot::Image>& new_heightmap);
 	void set_splatmap_image(const godot::Ref<godot::Image>& new_splatmap);
-	void set_texture_1(const godot::Ref<godot::Texture2D>& new_texture) { texture_1 = new_texture; }
-	void set_texture_2(const godot::Ref<godot::Texture2D>& new_texture) { texture_2 = new_texture; }
-	void set_texture_3(const godot::Ref<godot::Texture2D>& new_texture) { texture_3 = new_texture; }
-	void set_texture_4(const godot::Ref<godot::Texture2D>& new_texture) { texture_4 = new_texture; }
+	void set_texture_1(const godot::Ref<godot::Texture2D>& new_texture);
+	void set_texture_2(const godot::Ref<godot::Texture2D>& new_texture);
+	void set_texture_3(const godot::Ref<godot::Texture2D>& new_texture);
+	void set_texture_4(const godot::Ref<godot::Texture2D>& new_texture);
 
 	[[nodiscard]] godot::real_t get_mesh_size() const { return mesh_size; }
 	[[nodiscard]] godot::real_t get_half_mesh_size() const { return mesh_size * static_cast<godot::real_t>(0.5); }
@@ -70,6 +70,8 @@ public:
 private:
 	static void initialize_image(const godot::Ref<godot::Image>& image, godot::Image::Format format, int32_t size, godot::Color default_color = godot::Color());
 	static godot::Color bilinear_sample(const godot::Ref<godot::Image>& image, const godot::Vector2& point);
+	
+	void update_material_texture_parameter(const char* parameter_name, const godot::Ref<godot::Texture2D>& texture);
 
 	uint32_t get_quads_per_side() const { return static_cast<int32_t>(godot::Math::round(image_size * mesh_resolution)); }
 	uint32_t get_vertices_per_side() const { return get_quads_per_side() + 1; }
@@ -86,6 +88,8 @@ private:
 	godot::real_t texture_size = 1.0;
 	godot::Ref<godot::Image> splatmap;
 
+	godot::RID shader_id;
+	godot::RID material_id;
 	godot::Ref<godot::Texture2D> texture_1;
 	godot::Ref<godot::Texture2D> texture_2;
 	godot::Ref<godot::Texture2D> texture_3;

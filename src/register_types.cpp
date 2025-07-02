@@ -31,12 +31,7 @@ void initialize_simple_heightmap_module(ModuleInitializationLevel p_level)
 }
 
 void uninitialize_simple_heightmap_module(ModuleInitializationLevel p_level)
-{
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE)
-	{
-		return;
-	}
-}
+{ }
 
 extern "C"
 {
