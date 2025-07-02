@@ -16,10 +16,6 @@ constexpr const char* default_texture_4_param = "texture_map_4";
 
 void SimpleHeightmap::_bind_methods()
 {
-	const auto image_usage_flags =
-		godot::PROPERTY_USAGE_STORAGE |
-		godot::PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT;
-
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_resolution"), &SimpleHeightmap::get_mesh_resolution);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_image_size"), &SimpleHeightmap::get_image_size);
@@ -55,6 +51,11 @@ void SimpleHeightmap::_bind_methods()
 	BIND_ENUM_CONSTANT(REBUILD_UV);
 
 	godot::ClassDB::bind_method(godot::D_METHOD("rebuild", "change_type"), &SimpleHeightmap::rebuild);
+	
+	const auto image_usage_flags =
+		godot::PROPERTY_USAGE_STORAGE | // Heightmap and splatmap will be saved
+		godot::PROPERTY_USAGE_ALWAYS_DUPLICATE | // When duplicating a SimpleHeightmap, also duplicate its images
+		godot::PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT; // Editor ensures a Heightmap and Splatmap always exist
 
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_size"), "set_mesh_size", "get_mesh_size");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
