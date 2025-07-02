@@ -292,7 +292,7 @@ namespace
 		out_collision = godot::Vector3();
 
 		const auto pserver = godot::PhysicsServer3D::get_singleton();
-		if (pserver)
+		if (pserver && expected_heightmap != nullptr)
 		{
 			const auto world = camera.get_world_3d();
 			const auto space_state = world.is_valid() ? world->get_direct_space_state() : nullptr;
@@ -300,14 +300,14 @@ namespace
 			{
 				const auto a = camera.project_ray_origin(mouse_position);
 				const auto b = a + camera.project_ray_normal(mouse_position) * 1000.0;
-				const auto raycast_result = space_state->intersect_ray(godot::PhysicsRayQueryParameters3D::create(a, b));
+				const auto raycast_result = space_state->intersect_ray(godot::PhysicsRayQueryParameters3D::create(a, b, expected_heightmap->get_collider_layer()));
 				
 				const auto rid = static_cast<godot::RID>(raycast_result["rid"]);
 				if (rid.is_valid())
 				{
 					const auto object_id = pserver->body_get_object_instance_id(rid);
 					const auto picked_heightmap = godot::Object::cast_to<SimpleHeightmap>(godot::ObjectDB::get_instance(object_id));
-					if (picked_heightmap != nullptr && picked_heightmap == expected_heightmap)
+					if (picked_heightmap == expected_heightmap)
 					{
 						out_collision = static_cast<godot::Vector3>(raycast_result["position"]);
 						return true;
