@@ -1,0 +1,28 @@
+[configuration]
+
+entry_symbol = "simple_heightmap_library_init"
+compatibility_minimum = "4.4"
+reloadable = true
+
+[libraries]
+
+macos.debug = "bin/libsimpleheightmap.macos.template_debug.framework"
+macos.release = "bin/libsimpleheightmap.macos.template_release.framework"
+ios.debug = "bin/libsimpleheightmap.ios.template_debug.xcframework"
+ios.release = "bin/libsimpleheightmap.ios.template_release.xcframework"
+windows.editor.x86_32 = "bin/libsimpleheightmap.windows.editor.dev.x86_32.dll"
+windows.debug.x86_32 = "bin/libsimpleheightmap.windows.template_debug.dev.x86_32.dll"
+windows.release.x86_32 = "bin/libsimpleheightmap.windows.template_release.x86_32.dll"
+windows.editor.x86_64 = "bin/libsimpleheightmap.windows.editor.dev.x86_64.dll"
+windows.debug.x86_64 = "bin/libsimpleheightmap.windows.template_debug.dev.x86_64.dll"
+windows.release.x86_64 = "bin/libsimpleheightmap.windows.template_release.x86_64.dll"
+linux.debug.x86_64 = "bin/libsimpleheightmap.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "bin/libsimpleheightmap.linux.template_release.x86_64.so"
+linux.debug.arm64 = "bin/libsimpleheightmap.linux.template_debug.arm64.so"
+linux.release.arm64 = "bin/libsimpleheightmap.linux.template_release.arm64.so"
+linux.debug.rv64 = "bin/libsimpleheightmap.linux.template_debug.rv64.so"
+linux.release.rv64 = "bin/libsimpleheightmap.linux.template_release.rv64.so"
+android.debug.x86_64 = "bin/libsimpleheightmap.android.template_debug.x86_64.so"
+android.release.x86_64 = "bin/libsimpleheightmap.android.template_release.x86_64.so"
+android.debug.arm64 = "bin/libsimpleheightmap.android.template_debug.arm64.so"
+android.release.arm64 = "bin/libsimpleheightmap.android.template_release.arm64.so"
