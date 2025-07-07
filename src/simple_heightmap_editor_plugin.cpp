@@ -423,6 +423,7 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 			godot::Math::clamp(static_cast<int32_t>(godot::Math::round(mouse_image_position.y + brush_radius)), 0, image->get_height())
 		);
 		const auto size = max - min;
+		const auto ease = godot::Math::max(brush_ease, UNIT_EPSILON);
 
 		godot::Vector<godot::Color> buffer;
 		buffer.resize(size.x * size.y);
@@ -437,7 +438,7 @@ void SimpleHeightmapEditorPlugin::_process(double p_delta)
 				const auto ix = x + min.x;
 				const auto iy = y + min.y;
 				const auto d = mouse_image_position.distance_to(godot::Vector2(ix, iy));
-				const auto t = godot::UtilityFunctions::ease(godot::Math::max(1.0 - (d / brush_radius), 0.0), brush_ease);
+				const auto t = godot::UtilityFunctions::ease(godot::Math::max(1.0 - (d / brush_radius), 0.0), ease);
 				if (mouse_pressed)
 				{
 					buffer.set(x + y * size.x, modify_pixel(image, ix, iy, t, p_delta));
