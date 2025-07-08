@@ -29,7 +29,6 @@ public:
 	void rebuild(RebuildFlags flags);
 
 	void set_mesh_size(const godot::real_t value);
-	void set_mesh_resolution(const godot::real_t value);
 	void set_image_size(int value);
 	void set_texture_size(const godot::real_t value);
 	void set_heightmap_image(const godot::Ref<godot::Image>& new_heightmap);
@@ -44,7 +43,6 @@ public:
 
 	[[nodiscard]] godot::real_t get_mesh_size() const { return mesh_size; }
 	[[nodiscard]] godot::real_t get_half_mesh_size() const { return mesh_size * static_cast<godot::real_t>(0.5); }
-	[[nodiscard]] godot::real_t get_mesh_resolution() const { return mesh_resolution; }
 	[[nodiscard]] int get_image_size() const { return image_size; }
 	[[nodiscard]] godot::real_t get_texture_size() const { return texture_size; }
 	[[nodiscard]] godot::Ref<godot::Image> get_heightmap_image() const { return heightmap; }
@@ -75,14 +73,13 @@ private:
 	
 	void update_material_texture_parameter(const char* parameter_name, const godot::Ref<godot::Texture2D>& texture);
 
-	uint32_t get_quads_per_side() const { return static_cast<int32_t>(godot::Math::round(image_size * mesh_resolution)); }
+	uint32_t get_quads_per_side() const { return image_size; }
 	uint32_t get_vertices_per_side() const { return get_quads_per_side() + 1; }
 	uint32_t get_vertex_count() const { const auto n = get_vertices_per_side(); return n * n; }
 	uint32_t get_index_count() const { const auto n = get_quads_per_side(); return n * n * 6; }
 	godot::real_t get_quad_size() const { return mesh_size / static_cast<godot::real_t>(get_quads_per_side()); }
 
 	godot::real_t mesh_size = 4.0; // Mesh size
-	godot::real_t mesh_resolution = 1.0; // Mesh density
 	
 	int image_size = 16; // Size of the heightmap image (e.g., 64x64)
 	godot::Ref<godot::Image> heightmap;

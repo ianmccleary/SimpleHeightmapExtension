@@ -17,7 +17,6 @@ constexpr const char* default_texture_4_param = "texture_map_4";
 void SimpleHeightmap::_bind_methods()
 {
 	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_size"), &SimpleHeightmap::get_mesh_size);
-	godot::ClassDB::bind_method(godot::D_METHOD("get_mesh_resolution"), &SimpleHeightmap::get_mesh_resolution);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_image_size"), &SimpleHeightmap::get_image_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_texture_size"), &SimpleHeightmap::get_texture_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("get_heightmap_image"), &SimpleHeightmap::get_heightmap_image);
@@ -31,7 +30,6 @@ void SimpleHeightmap::_bind_methods()
 	godot::ClassDB::bind_method(godot::D_METHOD("get_collider_priority"), &SimpleHeightmap::get_collider_priority);
 
 	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_size", "value"), &SimpleHeightmap::set_mesh_size);
-	godot::ClassDB::bind_method(godot::D_METHOD("set_mesh_resolution", "value"), &SimpleHeightmap::set_mesh_resolution);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_image_size", "value"), &SimpleHeightmap::set_image_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_texture_size", "value"), &SimpleHeightmap::set_texture_size);
 	godot::ClassDB::bind_method(godot::D_METHOD("set_heightmap_image"), &SimpleHeightmap::set_heightmap_image);
@@ -58,7 +56,6 @@ void SimpleHeightmap::_bind_methods()
 		godot::PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT; // Editor ensures a Heightmap and Splatmap always exist
 
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_size"), "set_mesh_size", "get_mesh_size");
-	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "mesh_resolution"), "set_mesh_resolution", "get_mesh_resolution");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::INT, "image_size"), "set_image_size", "get_image_size");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::FLOAT, "texture_size"), "set_texture_size", "get_texture_size");
 	ADD_PROPERTY(godot::PropertyInfo(godot::Variant::OBJECT, "heightmap_image", godot::PROPERTY_HINT_RESOURCE_TYPE, "Image", image_usage_flags), "set_heightmap_image", "get_heightmap_image");
@@ -441,12 +438,6 @@ godot::Vector3 SimpleHeightmap::image_position_to_global_position(const godot::V
 void SimpleHeightmap::set_mesh_size(const godot::real_t value)
 {
 	mesh_size = value;
-	rebuild(REBUILD_ALL);
-}
-
-void SimpleHeightmap::set_mesh_resolution(const godot::real_t value)
-{
-	mesh_resolution = godot::Math::max(value, static_cast<godot::real_t>(0.1));
 	rebuild(REBUILD_ALL);
 }
 
